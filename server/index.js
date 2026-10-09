@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import { UPLOAD_DIR, flush } from './db.js';
+import { UPLOAD_DIR, initDb, closeDb } from './db.js';
 import account from './routes/account.js';
 import posts from './routes/posts.js';
 import friends from './routes/friends.js';
@@ -9,6 +9,7 @@ import messages, { sweepEphemeral } from './routes/messages.js';
 import invites from './routes/invites.js';
 import { loadLibraryFile } from './library.js';
 import admin from './routes/admin.js';
+import { pruneShorts } from './youtube.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -28,7 +29,7 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
-    'frame-src https://www.tiktok.com',
+    'frame-src https://www.tiktok.com https://www.youtube-nocookie.com https://www.youtube.com',
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -69,9 +70,12 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await initDb();
   setInterval(sweepEphemeral, 60e3).unref();
   sweepEphemeral();
   loadLibraryFile();
+  pruneShorts();
+  setInterval(pruneShorts, 6 * 36e5).unref();
   app.listen(PORT, () => console.log(`🔥 Ember running at http://localhost:${PORT}`));
-  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { flush(); process.exit(0); });
+  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { closeDb().finally(() => process.exit(0)); });
 }

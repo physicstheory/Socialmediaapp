@@ -39,10 +39,13 @@ export function showAuth(onDone, invite = null) {
     const u = h('input', { class: 'input', autocomplete: 'username', autocapitalize: 'none', required: true, placeholder: 'username' });
     const p = h('input', { class: 'input', type: 'password', autocomplete: 'current-password', required: true, placeholder: 'password' });
     const err = errBox();
+    const remember = h('input', { type: 'checkbox', checked: true });
     const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Sign in');
-    return h('form', { class: 'col gap', onsubmit: (e) => submit(e, '/auth/login', () => ({ username: u.value, password: p.value }), err, btn) },
+    return h('form', { class: 'col gap', onsubmit: (e) => submit(e, '/auth/login', () => ({ username: u.value, password: p.value, remember: remember.checked }), err, btn) },
       h('h2', { class: 'center' }, 'Sign in'),
-      field('Username', u), field('Password', p), err, btn,
+      field('Username', u), field('Password', p),
+      h('label', { class: 'remember' }, remember, h('span', {}, 'Keep me signed in on this device')),
+      err, btn,
       h('button', { type: 'button', class: 'link-btn', onclick: () => show(signup) }, 'New here? Create an account'));
   };
 

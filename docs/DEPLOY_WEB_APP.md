@@ -86,8 +86,47 @@ HTTPS is issued automatically.
 | `PORT` | `3000` | Port to listen on (hosts set this for you) |
 | `DATA_DIR` | `./data` | Where the database and uploads are stored. Point it at your persistent disk. |
 | `NODE_ENV` | — | Set to `production` when deployed |
+| `DATABASE_URL` | — | Free Postgres connection string (e.g. Neon) so accounts and chats survive restarts on the free plan |
+| `YOUTUBE_API_KEY` | — | Turns on YouTube Shorts in Discover |
 | `ADMIN_USERNAMES` | — | Comma-separated Ember usernames that can add videos to the Discover library in-app |
 | `EMBER_HATE_TERMS` | — | Comma-separated extra terms to always block |
+
+---
+
+## Keep accounts saved on Render's free plan (free database)
+
+Render's free plan erases the server's storage whenever the app restarts or wakes up from sleep, which deletes accounts and sign-ins. To fix that, give Ember a free outside database. You can do all of this from your iPhone:
+
+1. Go to **neon.tech** and sign up free (signing in with GitHub works).
+2. Create a project with any name, picking the region closest to your Render region.
+3. On the project dashboard, tap **Connect** and copy the **connection string**. It starts with `postgresql://` and ends with `sslmode=require`.
+4. On Render, open your service, then **Environment → Add Environment Variable**:
+   - Key: `DATABASE_URL`
+   - Value: paste the connection string
+5. Tap **Save Changes**. Render redeploys.
+
+Accounts, friends, chats, settings and your Discover library are now saved permanently. "Keep me signed in" keeps you logged in for a year and renews automatically while you use the app. Uploaded video files and photo Snaps are still stored on Render's disk, so on the free plan those can disappear after a restart. TikTok and YouTube videos aren't affected because they stream from TikTok and YouTube.
+
+---
+
+## Fill Discover with YouTube Shorts (automatic)
+
+Ember can fill Discover with YouTube Shorts on its own, matched to each person's interests, using YouTube's official API with SafeSearch set to strict. It needs a free key:
+
+1. Go to **console.cloud.google.com** and sign in with a Google account.
+2. Tap the project picker at the top, then **New Project**. Name it `Ember` and tap **Create**.
+3. Open the menu, then **APIs & Services → Library**. Search for **YouTube Data API v3**, open it and tap **Enable**.
+4. Go to **APIs & Services → Credentials → Create credentials → API key**, then copy the key.
+5. *(Recommended)* Tap the key, choose **Restrict key**, pick **YouTube Data API v3**, then **Save**.
+6. On Render, go to **Environment** and add `YOUTUBE_API_KEY` = your key, then save.
+
+How it works:
+- **Fetching:** the first time someone opens Discover, Ember fetches up to 50 Shorts for each of their interests. When they reach the end, it fetches the next 50, so Discover keeps going.
+- **Safety:**
+  - Every title is checked by Ember's safety filter.
+  - Videos YouTube marks **Made for Kids** are rated Everyone. Everything else starts at Teen 13+.
+  - Kids accounts only see Discover if a parent turns it on, and then only Everyone-rated videos.
+- **Free limits:** the free quota is 10,000 units a day, which is about 90 fetches of 50 videos. Ember stays under that by itself (you can lower its cap with `YOUTUBE_DAILY_UNITS`). Shorts are refreshed or removed after 30 days, as YouTube's terms require.
 
 ---
 

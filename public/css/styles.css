@@ -139,8 +139,8 @@ p { margin: 0; }
 .slide { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; background: #000; color: #fff; }
 .media { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #000 center/cover no-repeat; }
 .media video { width: 100%; height: 100%; object-fit: cover; }
-.media.tiktok iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
-.media.tiktok::before { content: ''; position: absolute; inset: 0; backdrop-filter: blur(18px) brightness(.6); }
+.media.tiktok iframe, .media.embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.media.tiktok::before, .media.embed::before { content: ''; position: absolute; inset: 0; backdrop-filter: blur(18px) brightness(.6); }
 .tap-layer { position: absolute; inset: 0; }
 .pause-icon { position: absolute; opacity: 0; pointer-events: none; color: rgba(255,255,255,.8); transition: opacity .15s; }
 .pause-icon.show { opacity: 1; }
@@ -152,7 +152,7 @@ p { margin: 0; }
   position: absolute; right: 8px; bottom: 18px; z-index: 3;
   display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
-.slide .media.tiktok ~ .rail { bottom: 90px; }
+.slide .media.tiktok ~ .rail, .slide .media.embed ~ .rail { bottom: 90px; }
 .rail-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; color: #fff; font-size: 12px; font-weight: 600; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 .rail-btn.liked .icon { color: var(--red); animation: like .35s ease; }
 .rail-btn.saved .icon { color: var(--orange); }
@@ -169,7 +169,7 @@ p { margin: 0; }
   background: linear-gradient(transparent, rgba(0,0,0,.55));
   pointer-events: none;
 }
-.slide .media.tiktok ~ .meta { bottom: 72px; background: none; }
+.slide .media.tiktok ~ .meta, .slide .media.embed ~ .meta { bottom: 72px; background: none; }
 .meta a, .meta button { pointer-events: auto; }
 .meta-user { font-weight: 700; font-size: 16px; }
 .meta-time { font-weight: 400; opacity: .7; font-size: 13px; }
@@ -425,3 +425,5 @@ textarea.input { resize: vertical; }
 .req-icon.small-icon { width: 34px; height: 34px; }
 .invite-more summary { cursor: pointer; color: var(--red); font-weight: 600; padding: 4px 0; }
 .invite-more[open] summary { margin-bottom: 10px; }
+.remember { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.remember input { width: 18px; height: 18px; accent-color: var(--red); }

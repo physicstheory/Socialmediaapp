@@ -18,7 +18,7 @@ export function isAdmin(user) {
   return admins.includes(user.username);
 }
 
-function picksAccount() {
+export function picksAccount() {
   let u = db.users.find((x) => x.username === PICKS_USERNAME);
   if (!u) {
     u = {

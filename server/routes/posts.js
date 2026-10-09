@@ -11,6 +11,7 @@ import {
 import { parseTikTokUrl, fetchOEmbed } from '../tiktok.js';
 import { areFriends, friendIds, isBlocked, getUser } from '../social.js';
 import { requestBlockedReason } from './friends.js';
+import { ensureShorts } from '../youtube.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -46,6 +47,7 @@ export function serializePost(post, viewer) {
     source: post.source,
     videoId: post.videoId || null,
     tiktokUrl: post.tiktokUrl || null,
+    youtubeUrl: post.youtubeUrl || null,
     videoUrl: post.videoUrl || null,
     thumbnailUrl: post.thumbnailUrl || null,
     caption: mask(post.caption || ''),
@@ -80,7 +82,7 @@ function discoverScore(post, viewer, interestBoost) {
   return score + jitter(viewer.id, post.id);
 }
 
-router.get('/feed', (req, res) => {
+router.get('/feed', async (req, res) => {
   const viewer = req.user;
   const tab = req.query.tab === 'discover' ? 'discover' : 'following';
   const offset = Math.max(0, Number(req.query.offset) || 0);
@@ -95,6 +97,9 @@ router.get('/feed', (req, res) => {
   }
 
   if (!viewer.settings.discoverEnabled) return res.json({ items: [], nextOffset: null, disabled: true });
+
+  // Top up Discover with YouTube Shorts for this person's interests (when YOUTUBE_API_KEY is set).
+  await ensureShorts(viewer.settings.interests, { more: req.query.more === '1' });
 
   // Personalize lightly from what the viewer liked (only within their allowed content).
   const boost = {};

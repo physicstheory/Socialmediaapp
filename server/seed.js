@@ -2,12 +2,13 @@
 //   npm run seed            (adds demo data; keeps existing data)
 //   npm run seed -- --reset (wipes the database first)
 import crypto from 'node:crypto';
-import { db, flush, reset } from './db.js';
+import { db, reset, initDb, closeDb } from './db.js';
 import { hashSecret } from './auth.js';
 import { defaultSettings, ageFromBirthdate } from './policy.js';
 import { analyzeText, rateFlags, categorize } from './moderation.js';
 import { pairKey } from './social.js';
 
+await initDb();
 if (process.argv.includes('--reset')) reset();
 
 const yearsAgo = (n) => {
@@ -78,7 +79,7 @@ if (!db.posts.length) {
   post(jordan, { source: 'external', videoUrl: BUNNY, caption: 'my cartoon edit lol #funny', category: 'comedy' }, 4);
 }
 
-flush();
+await closeDb();
 console.log(`
 Demo data ready. Every demo password is: ember-demo-123
 

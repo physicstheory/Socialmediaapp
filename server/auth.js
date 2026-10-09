@@ -4,7 +4,8 @@ import { userAge, userAgeGroup, publicLocks } from './policy.js';
 import { isAdmin } from './library.js';
 
 const COOKIE = 'ember_session';
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 365; // "Keep me signed in": renewed automatically while you keep using the app
+const SHORT_SESSION_HOURS = 12;
 
 export function hashSecret(secret) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -22,11 +23,15 @@ export function verifySecret(secret, stored) {
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-export function createSession(req, res, userId) {
+export function createSession(req, res, userId, remember = true) {
   const token = crypto.randomBytes(32).toString('hex');
-  db.sessions.push({ id: sha(token), userId, expiresAt: Date.now() + SESSION_DAYS * 864e5 });
+  const ms = remember ? SESSION_DAYS * 864e5 : SHORT_SESSION_HOURS * 36e5;
+  db.sessions.push({ id: sha(token), userId, remember, expiresAt: Date.now() + ms });
+  // Drop this person's expired sessions while we're here.
+  db.sessions = db.sessions.filter((s) => s.userId !== userId || s.expiresAt > Date.now());
   save();
-  res.setHeader('Set-Cookie', cookieString(req, token, SESSION_DAYS * 86400));
+  // Not remembered: no Max-Age, so the browser forgets the cookie when it closes.
+  res.setHeader('Set-Cookie', cookieString(req, token, remember ? SESSION_DAYS * 86400 : null));
 }
 
 export function destroySession(req, res) {
@@ -41,7 +46,8 @@ export function destroySession(req, res) {
 
 function cookieString(req, value, maxAge) {
   const secure = req.secure ? '; Secure' : ''; // HTTPS (directly or behind a proxy like Render/Fly)
-  return `${COOKIE}=${value}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+  const age = maxAge === null ? '' : `; Max-Age=${maxAge}`;
+  return `${COOKIE}=${value}; HttpOnly; Path=/; SameSite=Lax${age}${secure}`;
 }
 
 export function parseCookies(req) {
@@ -53,18 +59,30 @@ export function parseCookies(req) {
   return out;
 }
 
-export function userFromRequest(req) {
+function sessionFromRequest(req) {
   const token = parseCookies(req)[COOKIE];
   if (!token) return null;
-  const id = sha(token);
-  const session = db.sessions.find((s) => s.id === id);
+  const session = db.sessions.find((s) => s.id === sha(token));
   if (!session || session.expiresAt < Date.now()) return null;
-  return db.users.find((u) => u.id === session.userId) || null;
+  return { session, token };
+}
+
+export function userFromRequest(req) {
+  const found = sessionFromRequest(req);
+  return found ? db.users.find((u) => u.id === found.session.userId) || null : null;
 }
 
 export function requireAuth(req, res, next) {
-  const user = userFromRequest(req);
+  const found = sessionFromRequest(req);
+  const user = found && db.users.find((u) => u.id === found.session.userId);
   if (!user) return res.status(401).json({ error: 'Please sign in.' });
+  // Remembered sign-ins slide forward (at most once a day) so you're never logged out while using Ember.
+  const { session, token } = found;
+  if (session.remember && session.expiresAt - Date.now() < (SESSION_DAYS - 1) * 864e5 && req.path !== '/events') {
+    session.expiresAt = Date.now() + SESSION_DAYS * 864e5;
+    save();
+    res.setHeader('Set-Cookie', cookieString(req, token, SESSION_DAYS * 86400));
+  }
   req.user = user;
   next();
 }

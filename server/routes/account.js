@@ -79,12 +79,12 @@ router.post('/auth/signup', authLimiter, (req, res) => {
 });
 
 router.post('/auth/login', authLimiter, (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, remember = true } = req.body || {};
   const user = db.users.find((u) => u.username === String(username || '').trim().toLowerCase());
   if (!user || !verifySecret(password || '', user.passwordHash)) {
     return res.status(401).json({ error: 'Wrong username or password.' });
   }
-  createSession(req, res, user.id);
+  createSession(req, res, user.id, remember !== false);
   res.json({ user: selfUser(user) });
 });
 

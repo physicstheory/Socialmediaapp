@@ -9,6 +9,11 @@ const tiktokSrc = (id) => `https://www.tiktok.com/player/v1/${id}?${new URLSearc
   closed_caption: '1', progress_bar: '1', play_button: '1', volume_control: '1', fullscreen_button: '0', timestamp: '0',
 })}`;
 
+// YouTube's privacy-enhanced player. Starts muted (required for autoplay); tap the player to unmute.
+const youtubeSrc = (id) => `https://www.youtube-nocookie.com/embed/${id}?${new URLSearchParams({
+  autoplay: '1', mute: '1', loop: '1', playlist: id, playsinline: '1', rel: '0', modestbranding: '1', controls: '1', iv_load_policy: '3',
+})}`;
+
 const REPORT_REASONS = ['Bullying or harassment', 'Dangerous or harmful', 'Sexual content', 'Violence', 'Hate', 'Self-harm', 'Spam or scam', 'Something else'];
 
 /** Vertical, snap-scrolling video list. Returns { el, add(posts), destroy() }. */
@@ -43,7 +48,7 @@ export function videoList({ onNearEnd, emptyEl } = {}) {
     const v = slide.querySelector('video');
     if (v) v.pause();
     const frame = slide.querySelector('iframe');
-    if (frame) frame.removeAttribute('src'); // unloading the TikTok player stops playback
+    if (frame) frame.removeAttribute('src'); // unloading the embedded player stops playback
   }
 
   function remove(slide) {
@@ -80,7 +85,13 @@ export function videoList({ onNearEnd, emptyEl } = {}) {
 function slide(post, ctx) {
   const el = h('article', { class: 'slide', 'data-id': post.id });
   let media;
-  if (post.source === 'tiktok') {
+  if (post.source === 'youtube') {
+    media = h('div', { class: 'media embed', style: post.thumbnailUrl ? { backgroundImage: `url("${encodeURI(post.thumbnailUrl)}")` } : {} },
+      h('iframe', {
+        'data-src': youtubeSrc(post.videoId), title: 'YouTube Short', allow: 'autoplay; encrypted-media; picture-in-picture',
+        referrerpolicy: 'strict-origin-when-cross-origin', loading: 'lazy',
+      }));
+  } else if (post.source === 'tiktok') {
     media = h('div', { class: 'media tiktok', style: post.thumbnailUrl ? { backgroundImage: `url("${encodeURI(post.thumbnailUrl)}")` } : {} },
       h('iframe', {
         'data-src': tiktokSrc(post.videoId), title: 'TikTok video', allow: 'autoplay; encrypted-media; picture-in-picture',
@@ -163,7 +174,10 @@ function slide(post, ctx) {
     h('div', { class: 'meta-tags' },
       INTERESTS[post.category] ? h('span', { class: 'tag' }, INTERESTS[post.category]) : null,
       post.rating !== 'everyone' ? h('span', { class: 'tag rating' }, post.rating === 'teen' ? '13+' : '18+') : null),
-    post.source === 'tiktok' ? h('p', { class: 'music' }, icon('music', { size: 14 }), ` via TikTok${post.tiktokAuthor ? ` · ${post.tiktokAuthor}` : ''}`) : null);
+    post.source === 'tiktok' || post.source === 'youtube'
+      ? h('p', { class: 'music' }, icon('music', { size: 14 }), ` via ${post.source === 'youtube' ? 'YouTube' : 'TikTok'}${post.tiktokAuthor ? ` · ${post.tiktokAuthor}` : ''}`)
+      : null,
+    post.source === 'youtube' && post.tiktokTitle ? h('p', { class: 'caption small' }, post.tiktokTitle) : null);
 
   el.append(media, rail, meta);
   return el;
@@ -240,6 +254,7 @@ function openMore(post, removeSlide) {
     }) : null,
     !post.mine ? item('flag', 'Report video', () => reportPost(post, removeSlide), 'danger') : null,
     post.tiktokUrl ? h('a', { class: 'menu-item', href: post.tiktokUrl, target: '_blank', rel: 'noopener noreferrer' }, icon('link', { size: 22 }), 'Open in TikTok') : null,
+    post.youtubeUrl ? h('a', { class: 'menu-item', href: post.youtubeUrl, target: '_blank', rel: 'noopener noreferrer' }, icon('link', { size: 22 }), 'Open in YouTube') : null,
     post.mine ? item('close', 'Delete video', async () => {
       if (!(await confirmDialog('Delete this video?', 'This can’t be undone.', 'Delete', true))) return;
       await api(`/posts/${post.id}`, { method: 'DELETE' });
@@ -287,22 +302,35 @@ export function renderFeed(view) {
       (tabs.discover = h('button', { role: 'tab', onclick: () => switchTab('discover') }, 'Discover'))),
     h('a', { class: 'feed-top-side icon-btn', href: '#/friends', 'aria-label': 'Find friends' }, icon('search', { size: 26 })));
 
+  let shown = new Set(); // ids shown in this pass, so "load more" never repeats a video
+  let askedForMore = false;
+
   async function load() {
     if (loading) return;
+    let more = false;
     if (nextOffset === null) {
-      // Out of new videos: show a "caught up" card, then keep the feed going by replaying from the top.
       if (!list.count()) return;
-      list.addCard(h('div', { class: 'caught-up' },
-        emptyState('check', 'You’re all caught up', tab === 'following'
-          ? 'You’ve seen every video from your friends. Keep scrolling to watch them again.'
-          : 'You’ve seen every video that matches your interests and filters. Keep scrolling to replay, or add more interests for more videos.',
-        h('a', { class: 'btn ghost light', href: '#/settings' }, 'Add interests'))));
+      if (tab === 'discover' && !askedForMore) {
+        // Ran out: ask the server to fetch fresh Shorts for our interests, then keep going.
+        askedForMore = true;
+        more = true;
+      } else {
+        // Truly out of new videos: show a "caught up" card, then replay from the top.
+        list.addCard(h('div', { class: 'caught-up' },
+          emptyState('check', 'You’re all caught up', tab === 'following'
+            ? 'You’ve seen every video from your friends. Keep scrolling to watch them again.'
+            : 'You’ve seen every video that matches your interests and filters. Keep scrolling to replay, or add more interests for more videos.',
+          h('a', { class: 'btn ghost light', href: '#/settings' }, 'Add interests'))));
+        shown = new Set();
+        askedForMore = false;
+      }
       nextOffset = 0;
     }
     loading = true;
     const forTab = tab;
+    let retry = false;
     try {
-      const data = await api('/feed', { query: { tab, offset: nextOffset } });
+      const data = await api('/feed', { query: { tab, offset: nextOffset, ...(more ? { more: '1' } : {}) } });
       if (forTab !== tab) return;
       if (data.disabled) {
         list.el.replaceChildren(emptyState('eyeoff', 'Discover is off', 'You (or a parent) turned off Discover. Your Following feed is right next door.',
@@ -311,11 +339,16 @@ export function renderFeed(view) {
         nextOffset = null;
         return;
       }
+      const fresh = data.items.filter((p) => !shown.has(p.id));
+      fresh.forEach((p) => shown.add(p.id));
       nextOffset = data.nextOffset;
-      list.add(data.items);
+      list.add(fresh);
+      // A page with nothing new (after a "load more"): keep going so the feed never stalls at the end.
+      retry = !fresh.length && list.count() > 0;
     } catch (e) {
       toast(e.message, 'error');
     } finally { loading = false; }
+    if (retry) load();
   }
 
   function switchTab(t) {
@@ -326,6 +359,8 @@ export function renderFeed(view) {
     tabs.discover.setAttribute('aria-selected', String(t === 'discover'));
     list?.destroy();
     nextOffset = 0;
+    shown = new Set();
+    askedForMore = false;
     const emptyEl = t === 'following'
       ? emptyState('friends', 'Your Following feed is quiet', 'Videos your friends post show up here first. Add some friends to get started!',
         h('a', { class: 'btn primary', href: '#/friends' }, 'Find friends'),
