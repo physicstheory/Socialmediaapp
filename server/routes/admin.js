@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../auth.js';
 import { isAdmin, addToLibrary } from '../library.js';
-import { youtubeStatus, ensureShorts } from '../youtube.js';
+import { youtubeStatus, ensureShorts, cleanKey, testKey, setStoredKey } from '../youtube.js';
 import { rateLimit } from '../auth.js';
 
 const router = express.Router();
@@ -26,6 +26,25 @@ router.get('/youtube/status', requireAuth, (req, res) => res.json(youtubeStatus(
 
 router.post('/youtube/refresh', requireAuth, rateLimit({ windowMs: 60e3, max: 3, key: (req) => req.user.id }), async (req, res) => {
   await ensureShorts(req.user.settings.interests, { more: true, force: true, waitMs: 9000 });
+  res.json(youtubeStatus());
+});
+
+// Paste a YouTube API key in the app instead of Render (admins only). The key is checked with
+// YouTube before saving and is never sent back to the browser.
+router.put('/admin/youtube-key', requireAuth, rateLimit({ windowMs: 60e3, max: 5, key: (req) => req.user.id }), async (req, res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Only admins can change the YouTube key.' });
+  const key = cleanKey(req.body?.key);
+  if (!key) return res.status(400).json({ error: 'Paste your YouTube API key first.' });
+  const problem = await testKey(key);
+  if (problem) return res.status(400).json({ error: problem });
+  setStoredKey(key);
+  ensureShorts(req.user.settings.interests, { force: true }).catch(() => {});
+  res.json(youtubeStatus());
+});
+
+router.delete('/admin/youtube-key', requireAuth, (req, res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Only admins can change the YouTube key.' });
+  setStoredKey(null);
   res.json(youtubeStatus());
 });
 

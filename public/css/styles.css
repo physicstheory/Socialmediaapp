@@ -428,3 +428,4 @@ textarea.input { resize: vertical; }
 .remember { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .remember input { width: 18px; height: 18px; accent-color: var(--red); }
 .danger-text { color: var(--red); }
+.key-form { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }

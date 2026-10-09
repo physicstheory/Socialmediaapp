@@ -96,14 +96,52 @@ export function renderSettings(view) {
     }, st.lastError ? 'Try again' : 'Load more Shorts now');
     let line;
     if (!st.enabled) {
-      line = h('p', { class: 'small' }, '⚪ Not set up yet. Add YOUTUBE_API_KEY on Render → Environment, save, and wait for the redeploy. Steps are in docs/DEPLOY_WEB_APP.md.');
+      line = h('p', { class: 'small' }, user.isAdmin
+        ? '⚪ Not set up yet. Paste your YouTube API key below.'
+        : '⚪ Not set up yet. Add YOUTUBE_API_KEY on Render → Environment, save, and wait for the redeploy. Steps are in docs/DEPLOY_WEB_APP.md.');
     } else if (st.lastError) {
       line = h('p', { class: 'small danger-text' }, `🔴 ${st.lastError}`);
     } else {
       line = h('p', { class: 'small' }, st.shorts ? `🟢 Working: ${st.shorts} Shorts in Discover.` : '🟡 Key found. Shorts load the first time you open Discover, or tap below.');
     }
-    const hint = st.keyHint ? h('p', { class: 'tiny muted' }, `Key Ember is using: ${st.keyHint}. Compare it with the key in Google Cloud.`) : null;
-    ytBox.replaceChildren(line, hint, st.enabled ? retry : null);
+    const hint = st.keyHint ? h('p', { class: 'tiny muted' }, `Key Ember is using (${st.keySource === 'app' ? 'pasted here' : 'from Render'}): ${st.keyHint}. Compare it with the key in Google Cloud.`) : null;
+    ytBox.replaceChildren(...[line, hint, st.enabled ? retry : null, keyForm(st)].filter(Boolean));
+  }
+
+  // Admins can paste the key right here instead of going through Render.
+  function keyForm(st) {
+    if (!user.isAdmin) {
+      return h('p', { class: 'tiny muted' }, 'Want to paste the key in the app instead of Render? Add your username to ADMIN_USERNAMES on Render once, and a key box appears here.');
+    }
+    const input = h('input', { class: 'input', type: 'password', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', placeholder: 'Paste your YouTube API key (starts with AIza)' });
+    const saveBtn = h('button', { class: 'btn small primary' }, 'Check & save key');
+    const form = h('form', {
+      class: 'col gap key-form',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        if (!input.value.trim()) return toast('Paste your key first', 'error');
+        saveBtn.disabled = true; saveBtn.textContent = 'Checking with YouTube…';
+        try {
+          drawYouTube(await api('/admin/youtube-key', { method: 'PUT', body: { key: input.value } }));
+          toast('Key works! Shorts are loading into Discover 🎉');
+        } catch (err) {
+          toast(err.message, 'error');
+          saveBtn.disabled = false; saveBtn.textContent = 'Check & save key';
+        }
+      },
+    },
+    h('strong', { class: 'small' }, st.keySource === 'app' ? 'Replace the saved key' : 'Paste your key here'),
+    input,
+    h('div', { class: 'row gap' }, saveBtn,
+      st.keySource === 'app' ? h('button', {
+        type: 'button', class: 'btn small ghost',
+        onclick: async () => {
+          if (!(await confirmDialog('Remove the saved key?', 'Ember will go back to the key on Render, if there is one.', 'Remove', true))) return;
+          drawYouTube(await api('/admin/youtube-key', { method: 'DELETE' }));
+        },
+      }, 'Remove') : null),
+    h('p', { class: 'tiny muted' }, 'Ember tests the key with YouTube before saving. It’s stored on your server and never shown again.'));
+    return form;
   }
   api('/youtube/status').then(drawYouTube).catch(() => ytBox.replaceChildren());
 

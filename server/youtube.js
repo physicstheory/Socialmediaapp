@@ -41,7 +41,7 @@ const health = { lastError: null, lastErrorAt: null, lastOkAt: null };
 // Turn YouTube's error replies into something a person can act on.
 function explain(status, body) {
   const b = body.toLowerCase();
-  if (b.includes('api_key_invalid') || b.includes('keyinvalid') || b.includes('api key not valid')) return 'YouTube says the API key is not valid. Copy it again from Google Cloud → Credentials and paste it into Render.';
+  if (b.includes('api_key_invalid') || b.includes('keyinvalid') || b.includes('api key not valid')) return 'YouTube says the API key is not valid. Copy it again from Google Cloud → Credentials (use the copy button) and paste it again.';
   if (b.includes('accessnotconfigured') || b.includes('service_disabled') || b.includes('has not been used') || b.includes('is disabled')) return 'The YouTube Data API v3 is not turned on for this key\'s project. In Google Cloud → APIs & Services → Library, open "YouTube Data API v3" and tap Enable (it can take a few minutes).';
   if (b.includes('referer') || b.includes('referrer') || b.includes('api_key_http_referrer_blocked')) return 'The key is restricted to websites (HTTP referrers), which blocks Ember\'s server. In Google Cloud → Credentials → your key, set Application restrictions to "None" (keep the API restriction to YouTube Data API v3).';
   if (b.includes('ip address') || b.includes('api_key_ip_address_blocked')) return 'The key is restricted to certain IP addresses. Set Application restrictions to "None" in Google Cloud → Credentials.';
@@ -53,6 +53,7 @@ export function youtubeStatus() {
   const problem = keyProblem();
   return {
     enabled: youtubeEnabled(),
+    keySource: keySource(),
     keyHint: youtubeEnabled() ? `${apiKey().slice(0, 6)}…${apiKey().slice(-2)} (${apiKey().length} characters)` : null,
     shorts: db.posts.filter((p) => p.source === 'youtube').length,
     unitsToday: usage.day === new Date().toISOString().slice(0, 10) ? usage.units : 0,
@@ -62,17 +63,46 @@ export function youtubeStatus() {
 }
 
 // Clean up common copy-paste accidents: spaces, line breaks, quotes, or "KEY=" pasted into the value.
+export function cleanKey(raw) {
+  return String(raw || '').trim().replace(/^YOUTUBE_API_KEY\s*=\s*/i, '').replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
+}
+
+// A key pasted in Ember's Settings (admins only) takes priority over the Render environment variable.
+const storedKey = () => db.config.find((c) => c.key === 'youtubeApiKey')?.value || '';
+export const keySource = () => (storedKey() ? 'app' : process.env.YOUTUBE_API_KEY ? 'render' : null);
 export function apiKey() {
-  return String(process.env.YOUTUBE_API_KEY || '').trim().replace(/^YOUTUBE_API_KEY\s*=\s*/i, '').replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
+  return cleanKey(storedKey() || process.env.YOUTUBE_API_KEY);
+}
+
+/** Checks a key with YouTube using a 1-unit request. Returns null if it works, else what to fix. */
+export async function testKey(key) {
+  const problem = keyProblem(key, 'pasted');
+  if (problem) return problem;
+  try {
+    const r = await fetch(`${API}/videos?${new URLSearchParams({ part: 'id', id: 'jNQXAC9IVRw', key })}`, { signal: AbortSignal.timeout(8000) });
+    if (r.ok) return null;
+    return explain(r.status, await r.text());
+  } catch {
+    return 'Couldn’t reach YouTube to check the key. Try again in a minute.';
+  }
+}
+
+export function setStoredKey(key) {
+  db.config = db.config.filter((c) => c.key !== 'youtubeApiKey');
+  if (key) db.config.push({ key: 'youtubeApiKey', value: key, updatedAt: Date.now() });
+  // Start fresh: clear the old error and let every topic fetch right away.
+  health.lastError = null;
+  for (const k of Object.keys(state)) state[k].lastFetch = 0;
+  save();
 }
 
 /** Spots values that can't be a YouTube API key, without revealing the key itself. */
-export function keyProblem(key = apiKey()) {
+export function keyProblem(key = apiKey(), where = keySource() === 'app' ? 'saved' : 'Render') {
   if (!key) return null;
   if (key.endsWith('.apps.googleusercontent.com')) return 'That’s an OAuth Client ID, not an API key. In Google Cloud → Credentials, use Create credentials → API key, and copy the value that starts with "AIza".';
   if (key.startsWith('GOCSPX-')) return 'That’s an OAuth client secret, not an API key. In Google Cloud → Credentials, use Create credentials → API key, and copy the value that starts with "AIza".';
-  if (!key.startsWith('AIza')) return `The value in Render doesn’t look like a Google API key. Keys start with "AIza" (yours starts with "${key.slice(0, 4)}").`;
-  if (key.length !== 39) return `The key in Render is ${key.length} characters, but Google API keys are 39. Part of it was probably cut off or added when pasting. Copy it again with the copy button in Google Cloud → Credentials → Show key.`;
+  if (!key.startsWith('AIza')) return `The ${where === 'Render' ? 'value in Render' : `${where} value`} doesn’t look like a Google API key. Keys start with "AIza" (yours starts with "${key.slice(0, 4)}").`;
+  if (key.length !== 39) return `The ${where === 'Render' ? 'key in Render' : `${where} key`} is ${key.length} characters, but Google API keys are 39. Part of it was probably cut off or added when pasting. Copy it again with the copy button in Google Cloud → Credentials → Show key.`;
   return null;
 }
 

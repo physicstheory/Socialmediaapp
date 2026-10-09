@@ -177,3 +177,34 @@ test('parents page is public and account deletion removes everything', async () 
   assert.equal((await kid('DELETE', '/api/me', { password: 'password-123' })).status, 403);
   assert.equal((await kid('DELETE', '/api/me', { password: 'password-123', pin: '1234' })).status, 200);
 });
+
+test('admins can paste a YouTube key in the app; it is checked first and never returned', async () => {
+  const good = `AIza${'k'.repeat(35)}`;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    if (!String(url).includes('googleapis.com')) return realFetch(url, opts);
+    const key = new URL(url).searchParams.get('key');
+    return key === good
+      ? new Response(JSON.stringify({ items: [] }))
+      : new Response('{"error":{"message":"API key not valid. Please pass a valid API key.","details":[{"reason":"API_KEY_INVALID"}]}}', { status: 400 });
+  };
+  try {
+    process.env.ADMIN_USERNAMES = 'ytadmin';
+    const admin = await account('ytadmin', 30);
+    const other = await account('ytuser', 30);
+    assert.equal((await other('PUT', '/api/admin/youtube-key', { key: good })).status, 403);
+    const shape = await admin('PUT', '/api/admin/youtube-key', { key: '123.apps.googleusercontent.com' });
+    assert.match(shape.body.error, /Client ID/);
+    const bad = await admin('PUT', '/api/admin/youtube-key', { key: `AIza${'z'.repeat(35)}` });
+    assert.match(bad.body.error, /not valid/);
+    const ok = await admin('PUT', '/api/admin/youtube-key', { key: ` "${good}" ` });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.keySource, 'app');
+    assert.ok(!JSON.stringify(ok.body).includes(good));
+    const removed = await admin('DELETE', '/api/admin/youtube-key');
+    assert.notEqual(removed.body.keySource, 'app');
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.ADMIN_USERNAMES;
+  }
+});
