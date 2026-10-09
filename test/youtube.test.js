@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ember-yt-'));
 process.env.DATA_DIR = dir;
-process.env.YOUTUBE_API_KEY = 'test-key';
+process.env.YOUTUBE_API_KEY = 'AIzaTESTKEYTESTKEYTESTKEYTESTKEYTEST123';
 const { db, flush } = await import('../server/db.js');
 const { fetchCategory, ensureShorts, youtubeStatus } = await import('../server/youtube.js');
 after(() => { flush(); fs.rmSync(dir, { recursive: true, force: true }); });
@@ -21,7 +21,7 @@ let calls = [];
 globalThis.fetch = async (url) => {
   calls.push(url);
   const u = new URL(url);
-  assert.equal(u.searchParams.get('key'), 'test-key');
+  assert.equal(u.searchParams.get('key'), 'AIzaTESTKEYTESTKEYTESTKEYTESTKEYTEST123');
   if (u.pathname.endsWith('/search')) {
     assert.equal(u.searchParams.get('safeSearch'), 'strict');
     return new Response(JSON.stringify({ items: ['a1', 'b2', 'c3', 'd4'].map((videoId) => ({ id: { videoId } })), nextPageToken: 'NEXT' }));
@@ -61,4 +61,17 @@ test('explains YouTube errors so setup problems are visible', async () => {
   await ensureShorts(['tech'], { force: true });
   assert.match(youtubeStatus().lastError, /not turned on/);
   globalThis.fetch = realFetch;
+});
+
+test('cleans pasted keys and spots values that are not API keys', async () => {
+  const { apiKey, keyProblem } = await import('../server/youtube.js');
+  const good = `AIza${'x'.repeat(35)}`;
+  process.env.YOUTUBE_API_KEY = ` "${good}"\n`;
+  assert.equal(apiKey(), good);
+  assert.equal(keyProblem(), null);
+  assert.match(keyProblem('123-abc.apps.googleusercontent.com'), /Client ID/);
+  assert.match(keyProblem('GOCSPX-abc'), /client secret/);
+  assert.match(keyProblem('AIzaShort'), /39/);
+  assert.match(keyProblem('sk-something'), /doesn’t look like/);
+  process.env.YOUTUBE_API_KEY = 'AIzaTESTKEYTESTKEYTESTKEYTESTKEYTEST123';
 });

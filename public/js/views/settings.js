@@ -102,7 +102,8 @@ export function renderSettings(view) {
     } else {
       line = h('p', { class: 'small' }, st.shorts ? `🟢 Working: ${st.shorts} Shorts in Discover.` : '🟡 Key found. Shorts load the first time you open Discover, or tap below.');
     }
-    ytBox.replaceChildren(line, st.enabled ? retry : null);
+    const hint = st.keyHint ? h('p', { class: 'tiny muted' }, `Key Ember is using: ${st.keyHint}. Compare it with the key in Google Cloud.`) : null;
+    ytBox.replaceChildren(line, hint, st.enabled ? retry : null);
   }
   api('/youtube/status').then(drawYouTube).catch(() => ytBox.replaceChildren());
 

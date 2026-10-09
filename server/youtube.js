@@ -50,15 +50,33 @@ function explain(status, body) {
 }
 
 export function youtubeStatus() {
+  const problem = keyProblem();
   return {
     enabled: youtubeEnabled(),
+    keyHint: youtubeEnabled() ? `${apiKey().slice(0, 6)}…${apiKey().slice(-2)} (${apiKey().length} characters)` : null,
     shorts: db.posts.filter((p) => p.source === 'youtube').length,
     unitsToday: usage.day === new Date().toISOString().slice(0, 10) ? usage.units : 0,
     ...health,
+    ...(problem ? { lastError: problem } : {}),
   };
 }
 
-export const youtubeEnabled = () => Boolean(process.env.YOUTUBE_API_KEY);
+// Clean up common copy-paste accidents: spaces, line breaks, quotes, or "KEY=" pasted into the value.
+export function apiKey() {
+  return String(process.env.YOUTUBE_API_KEY || '').trim().replace(/^YOUTUBE_API_KEY\s*=\s*/i, '').replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
+}
+
+/** Spots values that can't be a YouTube API key, without revealing the key itself. */
+export function keyProblem(key = apiKey()) {
+  if (!key) return null;
+  if (key.endsWith('.apps.googleusercontent.com')) return 'That’s an OAuth Client ID, not an API key. In Google Cloud → Credentials, use Create credentials → API key, and copy the value that starts with "AIza".';
+  if (key.startsWith('GOCSPX-')) return 'That’s an OAuth client secret, not an API key. In Google Cloud → Credentials, use Create credentials → API key, and copy the value that starts with "AIza".';
+  if (!key.startsWith('AIza')) return `The value in Render doesn’t look like a Google API key. Keys start with "AIza" (yours starts with "${key.slice(0, 4)}").`;
+  if (key.length !== 39) return `The key in Render is ${key.length} characters, but Google API keys are 39. Part of it was probably cut off or added when pasting. Copy it again with the copy button in Google Cloud → Credentials → Show key.`;
+  return null;
+}
+
+export const youtubeEnabled = () => Boolean(apiKey());
 
 function spend(units) {
   const day = new Date().toISOString().slice(0, 10);
@@ -74,7 +92,7 @@ function seconds(iso = '') {
 }
 
 async function get(endpoint, params) {
-  const qs = new URLSearchParams({ ...params, key: process.env.YOUTUBE_API_KEY });
+  const qs = new URLSearchParams({ ...params, key: apiKey() });
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 8000);
   try {
