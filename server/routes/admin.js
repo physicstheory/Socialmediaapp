@@ -1,6 +1,8 @@
 import express from 'express';
 import { requireAuth } from '../auth.js';
 import { isAdmin, addToLibrary } from '../library.js';
+import { youtubeStatus, ensureShorts } from '../youtube.js';
+import { rateLimit } from '../auth.js';
 
 const router = express.Router();
 
@@ -17,6 +19,14 @@ router.post('/admin/library', requireAuth, async (req, res) => {
     else result.added++;
   }
   res.json(result);
+});
+
+// YouTube Shorts status for the Settings page, so setup problems are visible instead of silent.
+router.get('/youtube/status', requireAuth, (req, res) => res.json(youtubeStatus()));
+
+router.post('/youtube/refresh', requireAuth, rateLimit({ windowMs: 60e3, max: 3, key: (req) => req.user.id }), async (req, res) => {
+  await ensureShorts(req.user.settings.interests, { more: true, force: true, waitMs: 9000 });
+  res.json(youtubeStatus());
 });
 
 export default router;

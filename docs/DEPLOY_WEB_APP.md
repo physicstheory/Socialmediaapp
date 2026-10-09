@@ -118,8 +118,9 @@ Ember can fill Discover with YouTube Shorts on its own, matched to each person's
 2. Tap the project picker at the top, then **New Project**. Name it `Ember` and tap **Create**.
 3. Open the menu, then **APIs & Services → Library**. Search for **YouTube Data API v3**, open it and tap **Enable**.
 4. Go to **APIs & Services → Credentials → Create credentials → API key**, then copy the key.
-5. *(Recommended)* Tap the key, choose **Restrict key**, pick **YouTube Data API v3**, then **Save**.
-6. On Render, go to **Environment** and add `YOUTUBE_API_KEY` = your key, then save.
+5. *(Recommended)* Tap the key. Under **API restrictions** choose **Restrict key** and pick **YouTube Data API v3**. Leave **Application restrictions** set to **None**, because "Websites" or "IP addresses" will block Ember's server. Tap **Save**.
+6. On Render, go to **Environment** and add `YOUTUBE_API_KEY` = your key, then save and wait for the redeploy.
+7. In Ember, open **Settings → YouTube Shorts**. 🟢 means it's working. 🔴 tells you exactly what to fix, with a **Try again** button.
 
 How it works:
 - **Fetching:** the first time someone opens Discover, Ember fetches up to 50 Shorts for each of their interests. When they reach the end, it fetches the next 50, so Discover keeps going.

@@ -10,7 +10,7 @@ import { db, save } from './db.js';
 import { analyzeText, rateFlags, CATEGORIES } from './moderation.js';
 import { picksAccount } from './library.js';
 
-const API = 'https://www.googleapis.com/youtube/v3';
+const API = process.env.YOUTUBE_API_BASE || 'https://www.googleapis.com/youtube/v3';
 const DAILY_UNIT_BUDGET = Number(process.env.YOUTUBE_DAILY_UNITS) || 9000;
 const REFILL_BELOW = 40; // fetch more when a topic has fewer Shorts than this
 const COOLDOWN_MS = 10 * 60e3; // per topic, between fetches
@@ -36,6 +36,27 @@ export const QUERIES = {
 
 const state = {}; // category -> { term, pageToken, lastFetch, busy }
 let usage = { day: '', units: 0 };
+const health = { lastError: null, lastErrorAt: null, lastOkAt: null };
+
+// Turn YouTube's error replies into something a person can act on.
+function explain(status, body) {
+  const b = body.toLowerCase();
+  if (b.includes('api_key_invalid') || b.includes('keyinvalid') || b.includes('api key not valid')) return 'YouTube says the API key is not valid. Copy it again from Google Cloud → Credentials and paste it into Render.';
+  if (b.includes('accessnotconfigured') || b.includes('service_disabled') || b.includes('has not been used') || b.includes('is disabled')) return 'The YouTube Data API v3 is not turned on for this key\'s project. In Google Cloud → APIs & Services → Library, open "YouTube Data API v3" and tap Enable (it can take a few minutes).';
+  if (b.includes('referer') || b.includes('referrer') || b.includes('api_key_http_referrer_blocked')) return 'The key is restricted to websites (HTTP referrers), which blocks Ember\'s server. In Google Cloud → Credentials → your key, set Application restrictions to "None" (keep the API restriction to YouTube Data API v3).';
+  if (b.includes('ip address') || b.includes('api_key_ip_address_blocked')) return 'The key is restricted to certain IP addresses. Set Application restrictions to "None" in Google Cloud → Credentials.';
+  if (b.includes('quotaexceeded') || b.includes('dailylimitexceeded') || status === 429) return 'Today\'s free YouTube quota is used up. It resets at midnight Pacific time.';
+  return `YouTube returned an error (${status}).`;
+}
+
+export function youtubeStatus() {
+  return {
+    enabled: youtubeEnabled(),
+    shorts: db.posts.filter((p) => p.source === 'youtube').length,
+    unitsToday: usage.day === new Date().toISOString().slice(0, 10) ? usage.units : 0,
+    ...health,
+  };
+}
 
 export const youtubeEnabled = () => Boolean(process.env.YOUTUBE_API_KEY);
 
@@ -58,7 +79,11 @@ async function get(endpoint, params) {
   const t = setTimeout(() => ctrl.abort(), 8000);
   try {
     const r = await fetch(`${API}/${endpoint}?${qs}`, { signal: ctrl.signal });
-    if (!r.ok) throw new Error(`YouTube API ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) {
+      const body = await r.text();
+      throw Object.assign(new Error(explain(r.status, body)), { detail: body.slice(0, 300) });
+    }
+    health.lastOkAt = Date.now();
     return await r.json();
   } finally {
     clearTimeout(t);
@@ -107,9 +132,15 @@ export async function fetchCategory(cat) {
       added++;
     }
     if (added) save();
+    health.lastError = null;
     return added;
   } catch (e) {
-    console.error(`[youtube] ${cat}:`, e.message);
+    const message = e.name === 'AbortError' ? 'YouTube took too long to answer.' : e.message;
+    health.lastError = message;
+    health.lastErrorAt = Date.now();
+    usage.units = Math.max(0, usage.units - 101); // failed calls don't use quota
+    s.lastFetch = Date.now() - COOLDOWN_MS + 2 * 60e3; // retry a failing topic after ~2 minutes
+    console.error(`[youtube] ${cat}: ${message}${e.detail ? ` — ${e.detail}` : ''}`);
     return 0;
   } finally {
     s.busy = false;
@@ -120,13 +151,13 @@ export async function fetchCategory(cat) {
  * Make sure Discover has Shorts for these topics. `more` = the viewer is running out of videos,
  * so fetch the next page even if we already have plenty.
  */
-export async function ensureShorts(categories, { more = false, waitMs = 4500 } = {}) {
+export async function ensureShorts(categories, { more = false, force = false, waitMs = 4500 } = {}) {
   if (!youtubeEnabled()) return;
   const cats = (categories.length ? categories : Object.keys(QUERIES)).filter((c) => QUERIES[c] && CATEGORIES[c]);
   const due = cats.filter((c) => {
     const s = state[c];
     if (s?.busy) return false;
-    if (s && Date.now() - s.lastFetch < (more ? 60e3 : COOLDOWN_MS)) return false;
+    if (!force && s && Date.now() - s.lastFetch < (more ? 60e3 : COOLDOWN_MS)) return false;
     return more || countFor(c) < REFILL_BELOW;
   }).slice(0, 4);
   if (!due.length) return;

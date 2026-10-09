@@ -84,6 +84,28 @@ export function renderSettings(view) {
     });
   }
 
+  // Shows whether YouTube Shorts are working, and why not if they aren't.
+  const ytBox = h('div', { class: 'col gap' }, h('p', { class: 'small muted' }, 'Checking…'));
+  function drawYouTube(st) {
+    const retry = h('button', {
+      type: 'button', class: 'btn small ghost',
+      onclick: async () => {
+        retry.disabled = true; retry.textContent = 'Asking YouTube…';
+        try { drawYouTube(await api('/youtube/refresh', { method: 'POST' })); } catch (e) { toast(e.message, 'error'); retry.disabled = false; }
+      },
+    }, st.lastError ? 'Try again' : 'Load more Shorts now');
+    let line;
+    if (!st.enabled) {
+      line = h('p', { class: 'small' }, '⚪ Not set up yet. Add YOUTUBE_API_KEY on Render → Environment, save, and wait for the redeploy. Steps are in docs/DEPLOY_WEB_APP.md.');
+    } else if (st.lastError) {
+      line = h('p', { class: 'small danger-text' }, `🔴 ${st.lastError}`);
+    } else {
+      line = h('p', { class: 'small' }, st.shorts ? `🟢 Working: ${st.shorts} Shorts in Discover.` : '🟡 Key found. Shorts load the first time you open Discover, or tap below.');
+    }
+    ytBox.replaceChildren(line, st.enabled ? retry : null);
+  }
+  api('/youtube/status').then(drawYouTube).catch(() => ytBox.replaceChildren());
+
   async function loadBlocked() {
     const { items } = await api('/blocks');
     blocked.replaceChildren(...(items.length ? items.map((u) => h('div', { class: 'list-row' }, avatar(u, 36), h('span', { class: 'grow' }, u.displayName),
@@ -100,6 +122,7 @@ export function renderSettings(view) {
     h('p', { class: 'small muted pad' }, `Account mode: ${{ kid: 'Kids', teen: 'Teen', adult: 'Standard' }[user.ageGroup]} · Advanced algorithm settings`),
     interestsSection(draft),
     discoverSection(draft, user),
+    section('YouTube Shorts', 'Fills Discover with Shorts for your interests.', ytBox),
     maturitySection(draft, user),
     filtersSection(draft, user),
     blockedWordsSection(draft),

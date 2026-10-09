@@ -8,7 +8,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ember-yt-'));
 process.env.DATA_DIR = dir;
 process.env.YOUTUBE_API_KEY = 'test-key';
 const { db, flush } = await import('../server/db.js');
-const { fetchCategory, ensureShorts } = await import('../server/youtube.js');
+const { fetchCategory, ensureShorts, youtubeStatus } = await import('../server/youtube.js');
 after(() => { flush(); fs.rmSync(dir, { recursive: true, force: true }); });
 
 const video = (id, title, extra = {}) => ({
@@ -50,4 +50,15 @@ test('ensureShorts respects the cool-down and fetches new topics', async () => {
   assert.equal(calls.length, 0); // fetched moments ago
   await ensureShorts(['music']);
   assert.ok(calls.some((c) => c.includes('/search')));
+});
+
+test('explains YouTube errors so setup problems are visible', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: { code: 403, message: 'Requests from referer <empty> are blocked.', errors: [{ reason: 'forbidden' }], status: 'PERMISSION_DENIED', details: [{ reason: 'API_KEY_HTTP_REFERRER_BLOCKED' }] } }), { status: 403 });
+  assert.equal(await fetchCategory('art'), 0);
+  assert.match(youtubeStatus().lastError, /restricted to websites/);
+  globalThis.fetch = async () => new Response('{"error":{"message":"YouTube Data API v3 has not been used in project 123 before or it is disabled.","status":"PERMISSION_DENIED"}}', { status: 403 });
+  await ensureShorts(['tech'], { force: true });
+  assert.match(youtubeStatus().lastError, /not turned on/);
+  globalThis.fetch = realFetch;
 });
