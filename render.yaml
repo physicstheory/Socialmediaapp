@@ -1,0 +1,18 @@
+# One-click deploy on Render (https://render.com): New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: ember
+    runtime: node
+    plan: starter            # a persistent disk needs a paid plan; see docs/DEPLOY_WEB_APP.md
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: ember-data
+      mountPath: /var/data
+      sizeGB: 1

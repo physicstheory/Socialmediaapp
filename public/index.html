@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Ember — friends-first short videos and safe messaging.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ember">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <title>Ember</title>
+</head>
+<body>
+  <div id="splash" aria-label="Ember is loading">
+    <div class="splash-logo">
+      <svg viewBox="12 0 40 50" aria-hidden="true">
+        <path fill="#FF9500" transform="translate(-2.5 -1.5)" d="M33 4c3 9 13 14 13 28a14 14 0 0 1-28 0c0-6 3-10 6-13 0 5 2 8 5 9-2-9 1-17 4-24z"/>
+        <path fill="#FF2D2D" transform="translate(2.5 1.5)" d="M33 4c3 9 13 14 13 28a14 14 0 0 1-28 0c0-6 3-10 6-13 0 5 2 8 5 9-2-9 1-17 4-24z"/>
+        <path fill="#fff" d="M33 4c3 9 13 14 13 28a14 14 0 0 1-28 0c0-6 3-10 6-13 0 5 2 8 5 9-2-9 1-17 4-24z"/>
+      </svg>
+    </div>
+    <div class="splash-word">Ember</div>
+    <div class="splash-tag">Friends first. Safe by design.</div>
+  </div>
+  <div id="app"></div>
+  <div id="overlay-root"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <noscript>Ember needs JavaScript to run.</noscript>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

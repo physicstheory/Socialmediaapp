@@ -1,0 +1,20 @@
+{
+  "name": "ember-social",
+  "version": "1.0.0",
+  "description": "Ember: a safer, friends-first short video + messaging web app (TikTok-style feed, Snapchat-style chat).",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node server/seed.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
