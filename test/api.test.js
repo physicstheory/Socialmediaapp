@@ -129,3 +129,27 @@ test('invite links make friends and deliver the note, with age rules', async () 
   const bad = await a('POST', '/api/invites', { note: "don't tell your parents" });
   assert.equal(bad.status, 400);
 });
+
+test('add friends by TikTok username before and after they join', async () => {
+  const a = await account('ttadder', 15);
+  const waiting = await a('POST', '/api/friends/tiktok', { handle: '@Future.Pal', note: 'found you from tiktok!' });
+  assert.equal(waiting.body.status, 'waiting');
+  const reqs = await a('GET', '/api/friends/requests');
+  assert.equal(reqs.body.tiktokWaiting[0].handle, 'future.pal');
+  const c = client();
+  const r = await c('POST', '/api/auth/signup', { username: 'futurepal', password: 'password-123', birthdate: bday(16), tiktokHandle: 'future.pal' });
+  assert.equal(r.status, 200);
+  const inc = await c('GET', '/api/friends/requests');
+  assert.equal(inc.body.incoming.length, 1);
+  assert.equal(inc.body.incoming[0].viaTikTok, true);
+  await c('POST', `/api/friends/requests/${inc.body.incoming[0].id}/accept`, {});
+  const chat = await c('GET', `/api/chats/${a.user.id}`);
+  assert.equal(chat.body.items[0].text, 'found you from tiktok!');
+  // handle can't be claimed twice
+  const d = client();
+  const dup = await d('POST', '/api/auth/signup', { username: 'copycat', password: 'password-123', birthdate: bday(16), tiktokHandle: 'future.pal' });
+  assert.equal(dup.status, 400);
+  // adults adding a teen's TikTok name are blocked
+  const adult = await account('ttadult', 35);
+  assert.equal((await adult('POST', '/api/friends/tiktok', { handle: 'future.pal' })).status, 403);
+});

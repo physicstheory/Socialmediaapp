@@ -4,6 +4,7 @@ import { db, save } from '../db.js';
 import { requireAuth, publicUser, checkPin } from '../auth.js';
 import { userAgeGroup } from '../policy.js';
 import { areFriends, friendIds, isBlocked, mutualCount, pairKey, getUser, push } from '../social.js';
+import { checkMessage } from '../moderation.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -45,6 +46,70 @@ export function requestBlockedReason(from, to, viaCode) {
   return null;
 }
 
+export const TIKTOK_HANDLE_RE = /^[a-z0-9_.]{2,24}$/;
+export const cleanHandle = (h) => String(h || '').trim().toLowerCase().replace(/^@/, '');
+
+function createRequest(from, to, extra = {}) {
+  const r = { id: crypto.randomUUID(), from: from.id, to: to.id, viaCode: false, status: 'pending', createdAt: Date.now(), updatedAt: Date.now(), ...extra };
+  db.friendRequests.push(r);
+  push(to.id, 'friend_request', { from: publicUser(from) });
+  return r;
+}
+
+/**
+ * When someone sets their TikTok username on Ember, turn any "add by TikTok username" entries
+ * waiting for that name into normal friend requests (they still have to accept).
+ */
+export function matchTikTokAdds(user) {
+  if (!user.tiktokHandle) return;
+  for (const add of db.tiktokAdds.filter((a) => a.handle === user.tiktokHandle && a.from !== user.id)) {
+    const from = getUser(add.from);
+    const pending = from && db.friendRequests.some((r) => r.status === 'pending' && ((r.from === from.id && r.to === user.id) || (r.from === user.id && r.to === from.id)));
+    // The adder already knows them by name, so skip the "who can send me requests" preference, but keep every age/block rule.
+    if (from && !pending && !requestBlockedReason(from, user, true)) createRequest(from, user, { viaTikTok: true, note: add.note });
+  }
+  db.tiktokAdds = db.tiktokAdds.filter((a) => a.handle !== user.tiktokHandle);
+  save();
+}
+
+router.post('/friends/tiktok', (req, res) => {
+  const me = req.user;
+  const handle = cleanHandle(req.body?.handle);
+  if (!TIKTOK_HANDLE_RE.test(handle)) return res.status(400).json({ error: 'Enter their TikTok username, like @sunny.days' });
+  if (handle === me.tiktokHandle) return res.status(400).json({ error: "That's your own TikTok!" });
+  if (userAgeGroup(me) === 'kid' && !checkPin(me, req.body?.pin)) {
+    return res.status(403).json({ error: 'Ask a parent to enter the PIN to add a friend.', needPin: true });
+  }
+  let note = String(req.body?.note || '').trim().slice(0, 300);
+  if (note) {
+    const checked = checkMessage(note, { ageGroup: userAgeGroup(me) }, { ageGroup: 'teen' });
+    if (!checked.ok) return res.status(400).json({ error: checked.blockedReason });
+    note = checked.text;
+  }
+  const target = db.users.find((u) => u.tiktokHandle === handle && !u.system);
+  if (target) {
+    // They're already on Ember: send a normal friend request, with all the usual rules and their request preferences.
+    const reason = requestBlockedReason(me, target, false);
+    if (reason) return res.status(403).json({ error: reason });
+    if (db.friendRequests.some((r) => r.status === 'pending' && r.from === me.id && r.to === target.id)) return res.status(409).json({ error: 'Request already sent.' });
+    createRequest(me, target, { viaTikTok: true, note });
+    save();
+    return res.json({ status: 'requested', user: publicUser(target) });
+  }
+  const mine = db.tiktokAdds.filter((a) => a.from === me.id);
+  if (mine.some((a) => a.handle === handle)) return res.status(409).json({ error: `You already added @${handle}.` });
+  if (mine.length >= 50) return res.status(429).json({ error: 'You have a lot of TikTok friends waiting already. Remove some first.' });
+  db.tiktokAdds.push({ id: crypto.randomUUID(), from: me.id, handle, note, createdAt: Date.now() });
+  save();
+  res.json({ status: 'waiting', handle });
+});
+
+router.delete('/friends/tiktok/:id', (req, res) => {
+  db.tiktokAdds = db.tiktokAdds.filter((a) => !(a.id === req.params.id && a.from === req.user.id));
+  save();
+  res.json({ ok: true });
+});
+
 router.get('/friends', (req, res) => {
   const items = friendIds(req.user.id).map(getUser).filter(Boolean).map(publicUser)
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -56,11 +121,12 @@ router.get('/friends/requests', (req, res) => {
   const incoming = db.friendRequests.filter((r) => r.to === me && r.status === 'pending').map((r) => {
     const from = getUser(r.from);
     const days = Math.floor((Date.now() - from.createdAt) / 864e5);
-    return { id: r.id, user: publicUser(from), mutuals: mutualCount(me, from.id), accountAgeDays: days, newAccount: days < 7, viaCode: r.viaCode, createdAt: r.createdAt };
+    return { id: r.id, user: publicUser(from), mutuals: mutualCount(me, from.id), accountAgeDays: days, newAccount: days < 7, viaCode: r.viaCode, viaTikTok: Boolean(r.viaTikTok), createdAt: r.createdAt };
   });
   const outgoing = db.friendRequests.filter((r) => r.from === me && r.status === 'pending')
     .map((r) => ({ id: r.id, user: publicUser(getUser(r.to)), createdAt: r.createdAt }));
-  res.json({ incoming, outgoing });
+  const tiktokWaiting = db.tiktokAdds.filter((a) => a.from === me).map((a) => ({ id: a.id, handle: a.handle, createdAt: a.createdAt }));
+  res.json({ incoming, outgoing, tiktokWaiting });
 });
 
 router.get('/friends/search', (req, res) => {
@@ -130,13 +196,20 @@ function respond(accept) {
     const from = getUser(r.from);
     if (accept) {
       // Re-check safety rules at accept time (ages/blocks may have changed).
-      const reason = from ? requestBlockedReason(from, me, r.viaCode) : NOT_FOUND;
+      const reason = from ? requestBlockedReason(from, me, r.viaCode || r.viaTikTok) : NOT_FOUND;
       if (reason && reason !== "You're already friends.") {
         r.status = 'declined';
         save();
         return res.status(403).json({ error: reason });
       }
       if (!areFriends(me.id, from.id)) db.friendships.push({ key: pairKey(me.id, from.id), a: me.id, b: from.id, createdAt: Date.now() });
+      if (r.note) {
+        db.messages.push({
+          id: crypto.randomUUID(), convo: [me.id, from.id].sort().join(':'), from: from.id, to: me.id, kind: 'text',
+          text: r.note, createdAt: Date.now(), ephemeral: false, saved: false, openedAt: null,
+        });
+        push(me.id, 'message', { from: from.id });
+      }
       push(from.id, 'friend_accept', { user: publicUser(me) });
     }
     r.status = accept ? 'accepted' : 'declined';

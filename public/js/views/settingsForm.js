@@ -4,7 +4,7 @@ import { h, icon, toggle } from '../ui.js';
 export const INTERESTS = {
   comedy: '😂 Comedy', music: '🎵 Music', dance: '💃 Dance', sports: '⚽ Sports', gaming: '🎮 Gaming',
   animals: '🐶 Animals', food: '🍕 Food', education: '🧠 Learning', art: '🎨 Art & DIY', nature: '🌲 Nature & Travel',
-  tech: '🤖 Tech', fashion: '👟 Style',
+  tech: '🤖 Tech', fashion: '👟 Style', edits: '✂️ Edits', movies: '🎬 Movie & TV clips',
 };
 
 export const FILTERS = [

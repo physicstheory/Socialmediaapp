@@ -6,6 +6,14 @@ import {
 } from '../auth.js';
 import { ageFromBirthdate, ageGroupFor, defaultSettings, sanitizeSettings, userAge } from '../policy.js';
 import { analyzeText, severeReason } from '../moderation.js';
+import { matchTikTokAdds, cleanHandle, TIKTOK_HANDLE_RE } from './friends.js';
+
+function handleError(user, tt) {
+  if (!tt) return null;
+  if (!TIKTOK_HANDLE_RE.test(tt)) return 'That doesn’t look like a TikTok username.';
+  if (db.users.some((u) => u.tiktokHandle === tt && u.id !== user?.id)) return 'That TikTok username is already linked to another Ember account. If it’s yours, report it from their profile.';
+  return null;
+}
 
 const router = express.Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60e3, max: 20 });
@@ -23,7 +31,10 @@ function newFriendCode() {
 }
 
 router.post('/auth/signup', authLimiter, (req, res) => {
-  const { username, displayName, password, birthdate } = req.body || {};
+  const { username, displayName, password, birthdate, tiktokHandle } = req.body || {};
+  const tt = cleanHandle(tiktokHandle);
+  const ttErr = handleError(null, tt);
+  if (ttErr) return res.status(400).json({ error: ttErr });
   const uname = String(username || '').trim().toLowerCase();
   if (!/^[a-z0-9_.]{3,20}$/.test(uname)) {
     return res.status(400).json({ error: 'Usernames are 3–20 characters: letters, numbers, _ and .' });
@@ -55,12 +66,14 @@ router.post('/auth/signup', authLimiter, (req, res) => {
     avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
     friendCode: newFriendCode(),
     bio: '',
+    tiktokHandle: tt,
     settings: defaultSettings(age),
     pinHash: null,
     createdAt: Date.now(),
   };
   db.users.push(user);
   save();
+  matchTikTokAdds(user);
   createSession(req, res, user.id);
   res.json({ user: selfUser(user) });
 });
@@ -84,8 +97,9 @@ router.get('/me', requireAuth, (req, res) => res.json({ user: selfUser(req.user)
 
 router.put('/me/profile', requireAuth, (req, res) => {
   const { displayName, bio, tiktokHandle } = req.body || {};
-  const tt = String(tiktokHandle ?? req.user.tiktokHandle ?? '').trim().toLowerCase().replace(/^@/, '');
-  if (tt && !/^[a-z0-9_.]{2,24}$/.test(tt)) return res.status(400).json({ error: 'That doesn’t look like a TikTok username.' });
+  const tt = cleanHandle(tiktokHandle ?? req.user.tiktokHandle);
+  const ttErr = handleError(req.user, tt);
+  if (ttErr) return res.status(400).json({ error: ttErr });
   const name = String(displayName ?? req.user.displayName).trim().slice(0, 30);
   const b = String(bio ?? req.user.bio).trim().slice(0, 120);
   const check = analyzeText(`${name} ${b}`);
@@ -94,8 +108,10 @@ router.put('/me/profile', requireAuth, (req, res) => {
   }
   req.user.displayName = name;
   req.user.bio = b;
+  const changed = req.user.tiktokHandle !== tt;
   req.user.tiktokHandle = tt;
   save();
+  if (changed) matchTikTokAdds(req.user);
   res.json({ user: selfUser(req.user) });
 });
 

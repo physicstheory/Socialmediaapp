@@ -65,13 +65,19 @@ export function serializePost(post, viewer) {
   };
 }
 
+// Stable per-viewer shuffle that changes every few hours, so Discover feels fresh without breaking paging.
+function jitter(viewerId, postId) {
+  const bucket = Math.floor(Date.now() / (3 * 36e5));
+  return (crypto.createHash('sha1').update(`${viewerId}:${postId}:${bucket}`).digest()[0] / 255) * 3;
+}
+
 function discoverScore(post, viewer, interestBoost) {
   const likes = db.likes.filter((l) => l.postId === post.id).length;
   const ageHours = (Date.now() - post.createdAt) / 36e5;
   let score = Math.log2(likes + 1) * 1.5 - ageHours / 48;
   if (viewer.settings.interests.includes(post.category)) score += 4;
   score += interestBoost[post.category] || 0;
-  return score;
+  return score + jitter(viewer.id, post.id);
 }
 
 router.get('/feed', (req, res) => {

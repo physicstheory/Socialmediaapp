@@ -1,0 +1,6 @@
+{
+  "_help": "TikTok videos that fill the Discover tab for everyone. Add one entry per video: open a video in TikTok, tap Share > Copy link, paste it as the url, and pick a category from: comedy, music, dance, sports, gaming, animals, food, education, art, nature, tech, fashion, edits, movies. Optional: \"rating\": \"everyone\" | \"teen\" | \"mature\" (default teen). Ember checks every caption with its safety filter and skips anything harmful. After saving this file on GitHub, Render redeploys and the videos appear in Discover.",
+  "videos": [
+    { "url": "https://www.tiktok.com/@scout2015/video/6718335390845095173", "category": "animals", "rating": "everyone" }
+  ]
+}

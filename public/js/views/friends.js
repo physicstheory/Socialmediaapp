@@ -93,14 +93,38 @@ export function renderFriends(view) {
     },
   }, 'Create invite link');
 
+  // Add friends by their TikTok username, without leaving Ember.
+  const ttHandle = h('input', { class: 'input', placeholder: '@their.tiktok', autocapitalize: 'none', autocomplete: 'off', maxlength: '25' });
+  const ttNote = h('input', { class: 'input', placeholder: 'Message for when they join (optional)', maxlength: '300' });
+  const waitingBox = h('div', { class: 'list' });
+  const ttForm = h('form', {
+    class: 'col gap',
+    onsubmit: async (e) => {
+      e.preventDefault();
+      if (!ttHandle.value.trim()) return;
+      try {
+        const r = await withPin((pin) => api('/friends/tiktok', { method: 'POST', body: { handle: ttHandle.value, note: ttNote.value, pin } }), 'A parent needs to enter the PIN to add a friend.');
+        toast(r.status === 'requested'
+          ? `@${ttHandle.value.replace(/^@/, '')} is on Ember — friend request sent to ${r.user.displayName}!`
+          : `Added! When @${r.handle} joins Ember they’ll get your friend request.`);
+        ttHandle.value = ''; ttNote.value = '';
+        loadRequests();
+      } catch (err) { if (!err.cancelled) toast(err.message, 'error'); }
+    },
+  }, h('div', { class: 'row gap' }, ttHandle, h('button', { class: 'btn primary small' }, 'Add')), ttNote);
+
   async function loadRequests() {
-    const { incoming, outgoing } = await api('/friends/requests');
+    const { incoming, outgoing, tiktokWaiting = [] } = await api('/friends/requests');
+    waitingBox.replaceChildren(...tiktokWaiting.map((a) => h('div', { class: 'list-row' },
+      h('span', { class: 'req-icon small-icon' }, icon('music', { size: 16 })),
+      h('div', { class: 'col grow' }, h('strong', {}, `@${a.handle}`), h('span', { class: 'tiny muted' }, 'Waiting for them to join Ember')),
+      h('button', { class: 'btn small ghost', onclick: async () => { await api(`/friends/tiktok/${a.id}`, { method: 'DELETE' }); loadRequests(); } }, 'Remove'))));
     state.set({ requests: incoming.length });
     const rows = incoming.map((r) => h('div', { class: 'list-row request' },
       avatar(r.user, 44),
       h('div', { class: 'col grow' },
         h('strong', {}, r.user.displayName),
-        h('span', { class: 'small muted' }, `@${r.user.username} · ${r.mutuals} mutual friend${r.mutuals === 1 ? '' : 's'}${r.viaCode ? ' · used your code' : ''}`),
+        h('span', { class: 'small muted' }, `@${r.user.username} · ${r.mutuals} mutual friend${r.mutuals === 1 ? '' : 's'}${r.viaCode ? ' · used your code' : ''}${r.viaTikTok ? ' · added you by your TikTok name' : ''}`),
         r.newAccount || r.mutuals === 0
           ? h('span', { class: 'warn small' }, icon('shield', { size: 14 }), r.newAccount ? ' New account — only accept if you know them in real life.' : ' No mutual friends — only accept people you know.')
           : null),
@@ -148,9 +172,12 @@ export function renderFriends(view) {
           : 'Ember keeps adults and under-18s apart. Only friends can message you.')),
     isKid ? null : h('section', {}, searchInput, results),
     h('section', {}, h('h3', {}, 'Add with a friend code'), codeForm, myCode),
-    h('section', {}, h('h3', {}, 'Invite TikTok friends'),
-      h('p', { class: 'small muted' }, 'Friends not on Ember yet? Make an invite link and send it to them in a TikTok message. When they open it and join, you’ll be friends on Ember and your message will be waiting in their chat.'),
-      note, makeInvite, inviteOut),
+    h('section', {}, h('h3', {}, 'Add TikTok friends'),
+      h('p', { class: 'small muted' }, 'Type a friend’s TikTok username. If they’re on Ember they get your request now. If not, Ember saves it, and when they join and link that TikTok name your request (and message) is waiting for them.'),
+      ttForm, waitingBox,
+      h('p', { class: 'tiny muted' }, icon('shield', { size: 12 }), ' Ember can’t check TikTok accounts, so make sure it’s really your friend before you chat.'),
+      h('details', { class: 'invite-more' }, h('summary', { class: 'small' }, 'Want them to know sooner? Send an invite link'),
+        h('div', { class: 'col gap' }, note, makeInvite, inviteOut))),
     h('section', {}, h('h3', {}, 'Friend requests'), requestsBox),
     h('section', {}, h('h3', {}, 'Your friends'), friendsBox)));
 

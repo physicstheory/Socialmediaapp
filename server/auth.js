@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { db, save } from './db.js';
 import { userAge, userAgeGroup, publicLocks } from './policy.js';
+import { isAdmin } from './library.js';
 
 const COOKIE = 'ember_session';
 const SESSION_DAYS = 30;
@@ -84,6 +85,7 @@ export function selfUser(u) {
     settings: u.settings,
     locks: publicLocks(userAge(u)),
     hasPin: Boolean(u.pinHash),
+    isAdmin: isAdmin(u),
     createdAt: u.createdAt,
   };
 }

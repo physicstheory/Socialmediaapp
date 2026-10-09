@@ -8,6 +8,8 @@ A friends-first short-video and messaging web app. It looks and scrolls like Tik
 - **Age-based protections that switch on automatically.** Your birthday puts you in kids, teen or standard mode. Some protections are locked for younger users. Kids accounts need a parent PIN.
 - **Snapchat-style messaging.** Chats with friends only, disappearing messages, view-once photo Snaps, save-in-chat, live updates and Snapchat-style status markers (New Snap, New Chat, Delivered, Opened).
 - **Safer friend requests.** See [Safety model](#safety-model).
+- **Add TikTok friends by username.** On the Friends tab, type a friend's TikTok username. If they're already on Ember, they get your request right away. If not, Ember saves it, and when they join with that TikTok name your request and message are waiting for them. Ember can't verify TikTok accounts, so each name can only be linked to one Ember account and requests are labelled.
+- **Discover library.** Fill Discover with trending TikToks, edits and movie clips by adding links to `discover-library.json` (see [docs/DEPLOY_WEB_APP.md](docs/DEPLOY_WEB_APP.md#filling-discover-with-tiktok-videos)).
 - **Invite TikTok friends.** Make a one-time invite link (with an optional message) on the Friends tab and send it in a TikTok DM. When they open it and join, you're friends on Ember and your message is waiting in their chat. You can also add your TikTok username to your profile so friends your age can search for it.
 - **Installable web app (PWA).** Add it to your home screen and it opens full-screen like a native app.
 

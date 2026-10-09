@@ -86,7 +86,28 @@ HTTPS is issued automatically.
 | `PORT` | `3000` | Port to listen on (hosts set this for you) |
 | `DATA_DIR` | `./data` | Where the database and uploads are stored. Point it at your persistent disk. |
 | `NODE_ENV` | — | Set to `production` when deployed |
+| `ADMIN_USERNAMES` | — | Comma-separated Ember usernames that can add videos to the Discover library in-app |
 | `EMBER_HATE_TERMS` | — | Comma-separated extra terms to always block |
+
+---
+
+## Filling Discover with TikTok videos
+
+TikTok doesn't let other apps download its For You or trending feed. So Discover is built from a **library of TikTok links** that you choose, plus anything people on Ember post publicly. The videos still stream from TikTok's servers through TikTok's official player.
+
+**Permanent way (works on the Free plan), from your iPhone:**
+1. In TikTok, open a video you want (an edit, a movie clip, something trending). Tap **Share → Copy link**.
+2. On github.com, open your repo and tap **`discover-library.json`**, then the **✏️ pencil**.
+3. Add a line inside `"videos": [ … ]` for each video, with a comma between entries:
+   ```json
+   { "url": "PASTE-THE-LINK", "category": "movies" },
+   ```
+   Categories: `comedy, music, dance, sports, gaming, animals, food, education, art, nature, tech, fashion, edits, movies`. You can also add `"rating": "everyone"` for kid-safe videos. The default is Teen 13+.
+4. Tap **Commit changes**. Render redeploys, and the videos appear in Discover for everyone whose interests and filters match.
+
+**Quick way (in the app):** on Render, go to **Environment** and add `ADMIN_USERNAMES` = your Ember username. Then **Settings → Discover library (admin)** lets you paste lots of links at once. On the Free plan these vanish when the app restarts, so put your favourites in the file too.
+
+Every video's TikTok caption goes through Ember's safety filter. Anything harmful is skipped.
 
 ---
 

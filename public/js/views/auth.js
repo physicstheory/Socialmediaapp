@@ -51,15 +51,18 @@ export function showAuth(onDone, invite = null) {
     const d = h('input', { class: 'input', maxlength: '30', placeholder: 'Your name (shown to friends)' });
     const b = h('input', { class: 'input', type: 'date', required: true, max: new Date().toISOString().slice(0, 10) });
     const p = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', required: true, minlength: '8', placeholder: 'At least 8 characters' });
+    const t = h('input', { class: 'input', autocapitalize: 'none', maxlength: '25', placeholder: '@yourtiktok (optional)' });
     const err = errBox();
     const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Create account');
-    return h('form', { class: 'col gap', onsubmit: (e) => submit(e, '/auth/signup', () => ({ username: u.value, displayName: d.value, birthdate: b.value, password: p.value }), err, btn) },
+    return h('form', { class: 'col gap', onsubmit: (e) => submit(e, '/auth/signup', () => ({ username: u.value, displayName: d.value, birthdate: b.value, password: p.value, tiktokHandle: t.value }), err, btn) },
       h('h2', { class: 'center' }, 'Create account'),
       field('Username', u),
       field('Display name', d),
       field('Birthday', b),
       h('p', { class: 'tiny muted' }, 'Your birthday sets up age-appropriate protections automatically. It’s never shown to anyone.'),
       field('Password', p),
+      field('TikTok username', t),
+      h('p', { class: 'tiny muted' }, 'Lets friends who added your TikTok name find you right away.'),
       err, btn,
       h('button', { type: 'button', class: 'link-btn', onclick: () => show(signin) }, 'Already have an account? Sign in'));
   };

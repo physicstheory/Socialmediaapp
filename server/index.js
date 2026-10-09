@@ -7,6 +7,8 @@ import posts from './routes/posts.js';
 import friends from './routes/friends.js';
 import messages, { sweepEphemeral } from './routes/messages.js';
 import invites from './routes/invites.js';
+import { loadLibraryFile } from './library.js';
+import admin from './routes/admin.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -49,7 +51,7 @@ app.use('/api', (req, res, next) => {
 });
 
 app.use('/api', express.json({ limit: '100kb' }));
-app.use('/api', account, invites, posts, friends, messages);
+app.use('/api', account, invites, admin, posts, friends, messages);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
 
 app.use('/media/videos', express.static(path.join(UPLOAD_DIR, 'videos'), { maxAge: '7d', fallthrough: false }));
@@ -69,6 +71,7 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   setInterval(sweepEphemeral, 60e3).unref();
   sweepEphemeral();
+  loadLibraryFile();
   app.listen(PORT, () => console.log(`🔥 Ember running at http://localhost:${PORT}`));
   for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { flush(); process.exit(0); });
 }

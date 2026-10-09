@@ -2,7 +2,7 @@ import { api, state, withPin } from '../api.js';
 import { h, icon, avatar, toast, confirmDialog } from '../ui.js';
 import { signOut } from '../app.js';
 import {
-  maturitySection, filtersSection, interestsSection, blockedWordsSection, discoverSection, privacySection, safetyRules, section,
+  maturitySection, filtersSection, interestsSection, blockedWordsSection, discoverSection, privacySection, safetyRules, section, INTERESTS,
 } from './settingsForm.js';
 
 export function renderSettings(view) {
@@ -39,6 +39,26 @@ export function renderSettings(view) {
           user.hasPin && user.ageGroup !== 'kid' ? h('button', { type: 'button', class: 'btn small ghost', onclick: () => call(null) }, 'Remove PIN') : null)));
   }
 
+  function librarySection() {
+    const urls = h('textarea', { class: 'input', rows: '5', placeholder: 'Paste TikTok links, one per line' });
+    const cat = h('select', { class: 'input' }, h('option', { value: '' }, 'Auto-detect topic'),
+      Object.entries(INTERESTS).map(([k, v]) => h('option', { value: k }, v)));
+    const rating = h('select', { class: 'input' }, h('option', { value: 'everyone' }, 'Everyone'), h('option', { value: 'teen', selected: true }, 'Teen 13+'), h('option', { value: 'mature' }, 'Mature 18+'));
+    const btn = h('button', {
+      type: 'button', class: 'btn primary',
+      onclick: async () => {
+        btn.disabled = true; btn.textContent = 'Adding…';
+        try {
+          const r = await api('/admin/library', { method: 'POST', body: { urls: urls.value, category: cat.value, rating: rating.value } });
+          toast(`Added ${r.added} · ${r.duplicates} already there${r.failed.length ? ` · ${r.failed.length} failed` : ''}`);
+          urls.value = r.failed.map((f) => f.split(' — ')[0]).join('\n');
+        } catch (e) { toast(e.message, 'error'); } finally { btn.disabled = false; btn.textContent = 'Add to Discover'; }
+      },
+    }, 'Add to Discover');
+    return section('Discover library (admin)', 'Add TikTok videos everyone can see in Discover. On the free Render plan, links added here vanish on restart — put permanent ones in discover-library.json on GitHub.',
+      urls, h('div', { class: 'row gap' }, cat, rating), btn);
+  }
+
   async function loadBlocked() {
     const { items } = await api('/blocks');
     blocked.replaceChildren(...(items.length ? items.map((u) => h('div', { class: 'list-row' }, avatar(u, 36), h('span', { class: 'grow' }, u.displayName),
@@ -61,6 +81,7 @@ export function renderSettings(view) {
     privacySection(draft, user),
     pinSection(),
     safetyRules(user),
+    user.isAdmin ? librarySection() : null,
     section('Blocked accounts', null, blocked),
     section('Account', null,
       h('p', { class: 'small muted' }, `Signed in as @${user.username}`),

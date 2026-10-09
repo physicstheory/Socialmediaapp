@@ -22,6 +22,8 @@ export const CATEGORIES = {
   art: ['art', 'drawing', 'painting', 'diy', 'craft', 'crafts', 'sketch', 'design', 'animation'],
   nature: ['nature', 'outdoors', 'travel', 'hiking', 'ocean', 'beach', 'mountains', 'flowers', 'garden', 'camping'],
   tech: ['tech', 'coding', 'programming', 'robot', 'robots', 'gadgets', 'ai', 'computer', 'engineering'],
+  edits: ['edit', 'edits', 'fanedit', 'capcut', 'aftereffects', 'amv', 'velocity', 'transition', 'transitions'],
+  movies: ['movie', 'movies', 'film', 'films', 'scene', 'trailer', 'netflix', 'marvel', 'disney', 'pixar', 'tvshow', 'series', 'cinema', 'moviescene', 'movieclips'],
   fashion: ['fashion', 'outfit', 'ootd', 'style', 'makeup', 'beauty', 'hair', 'nails'],
 };
 

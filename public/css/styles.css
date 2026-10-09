@@ -407,7 +407,8 @@ textarea.input { resize: vertical; }
   background: rgba(30,30,30,.95); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: min(90vw, 420px);
   transition: transform .25s ease; pointer-events: none; text-align: center;
 }
-#toast.show { transform: translate(-50%, 0); }
+#toast { opacity: 0; visibility: hidden; transform: translate(-50%, calc(-100% - 16px - var(--safe-t))); transition: transform .25s ease, opacity .25s ease, visibility 0s linear .25s; }
+#toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: transform .25s ease, opacity .25s ease; }
 #toast.error { background: var(--red); }
 
 @media (min-width: 520px) {
@@ -421,3 +422,6 @@ textarea.input { resize: vertical; }
 .caught-up .muted { color: #aaa; }
 .invite-banner { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: var(--radius); background: linear-gradient(135deg, rgba(255,149,0,.12), rgba(255,59,48,.12)); }
 .invite-url { overflow-wrap: anywhere; font-family: ui-monospace, Menlo, monospace; }
+.req-icon.small-icon { width: 34px; height: 34px; }
+.invite-more summary { cursor: pointer; color: var(--red); font-weight: 600; padding: 4px 0; }
+.invite-more[open] summary { margin-bottom: 10px; }
