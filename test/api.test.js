@@ -6,6 +6,7 @@ import path from 'node:path';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ember-test-'));
 process.env.DATA_DIR = dir;
+process.env.AUTH_RATE_LIMIT = '500';
 const { app } = await import('../server/index.js');
 const { flush } = await import('../server/db.js');
 let server;
@@ -152,4 +153,27 @@ test('add friends by TikTok username before and after they join', async () => {
   // adults adding a teen's TikTok name are blocked
   const adult = await account('ttadult', 35);
   assert.equal((await adult('POST', '/api/friends/tiktok', { handle: 'future.pal' })).status, 403);
+});
+
+test('parents page is public and account deletion removes everything', async () => {
+  const page = await fetch(`${base}/parents`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /actually say yes to/);
+
+  const a = await account('deleteme', 30, { friendRequests: 'everyone' });
+  const b = await account('staysafe', 30, { friendRequests: 'everyone' });
+  await a('POST', '/api/friends/request', { username: 'staysafe' });
+  const { body } = await b('GET', '/api/friends/requests');
+  await b('POST', `/api/friends/requests/${body.incoming[0].id}/accept`, {});
+  await a('POST', `/api/chats/${b.user.id}`, { text: 'bye!' });
+  assert.equal((await a('DELETE', '/api/me', { password: 'wrong-pass' })).status, 403);
+  assert.equal((await a('DELETE', '/api/me', { password: 'password-123' })).status, 200);
+  assert.equal((await a('GET', '/api/me')).status, 401);
+  assert.equal((await b('GET', '/api/friends')).body.items.length, 0);
+  const login = await client()('POST', '/api/auth/login', { username: 'deleteme', password: 'password-123' });
+  assert.equal(login.status, 401);
+
+  const kid = await account('kiddel', 9);
+  assert.equal((await kid('DELETE', '/api/me', { password: 'password-123' })).status, 403);
+  assert.equal((await kid('DELETE', '/api/me', { password: 'password-123', pin: '1234' })).status, 200);
 });

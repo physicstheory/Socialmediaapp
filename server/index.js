@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -54,6 +55,18 @@ app.use('/api', (req, res, next) => {
 app.use('/api', express.json({ limit: '100kb' }));
 app.use('/api', account, invites, admin, posts, friends, messages);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
+
+// Public "For parents" page (no sign-in needed). SUPPORT_EMAIL adds a contact line.
+const parentsTemplate = fs.readFileSync(path.join(ROOT, 'server', 'pages', 'parents.html'), 'utf8');
+const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+app.get('/parents', (req, res) => {
+  const email = (process.env.SUPPORT_EMAIL || '').trim();
+  const contact = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i.test(email)
+    ? `<p>Questions or a safety concern? Email <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>.</p>`
+    : '<p>Questions or a safety concern? Use the report buttons in the app.</p>';
+  res.setHeader('Cache-Control', 'no-cache');
+  res.type('html').send(parentsTemplate.replace('{{SUPPORT_CONTACT}}', contact));
+});
 
 app.use('/media/videos', express.static(path.join(UPLOAD_DIR, 'videos'), { maxAge: '7d', fallthrough: false }));
 app.use(express.static(path.join(ROOT, 'public'), {

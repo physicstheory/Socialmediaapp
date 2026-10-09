@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import express from 'express';
-import { db, save } from '../db.js';
+import { db, save, UPLOAD_DIR } from '../db.js';
 import {
   hashSecret, verifySecret, createSession, destroySession, requireAuth, selfUser, rateLimit, checkPin,
 } from '../auth.js';
@@ -16,7 +18,7 @@ function handleError(user, tt) {
 }
 
 const router = express.Router();
-const authLimiter = rateLimit({ windowMs: 15 * 60e3, max: 20 });
+const authLimiter = rateLimit({ windowMs: 15 * 60e3, max: Number(process.env.AUTH_RATE_LIMIT) || 20 });
 
 const AVATAR_COLORS = ['#FF3B2F', '#FF8A00', '#FF5E3A', '#FFB300', '#E63946', '#F77F00', '#D62828', '#FCA311'];
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -94,6 +96,38 @@ router.post('/auth/logout', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => res.json({ user: selfUser(req.user) }));
+
+// Permanently delete your account and everything you created (required by the App Store and Google Play).
+router.delete('/me', requireAuth, authLimiter, (req, res) => {
+  const me = req.user;
+  if (!verifySecret(req.body?.password || '', me.passwordHash)) return res.status(403).json({ error: 'Wrong password.' });
+  if (ageGroupFor(userAge(me)) === 'kid' && !checkPin(me, req.body?.pin)) {
+    return res.status(403).json({ error: 'Enter the parent PIN to delete this account.', needPin: true });
+  }
+  const id = me.id;
+  const myPosts = new Set(db.posts.filter((p) => p.authorId === id).map((p) => p.id));
+  for (const p of db.posts) {
+    if (myPosts.has(p.id) && p.source === 'upload') fs.rm(path.join(UPLOAD_DIR, 'videos', path.basename(p.videoUrl)), () => {});
+  }
+  for (const m of db.messages) {
+    if ((m.from === id || m.to === id) && m.kind === 'snap' && m.file) fs.rm(path.join(UPLOAD_DIR, 'snaps', m.file), () => {});
+  }
+  db.posts = db.posts.filter((p) => p.authorId !== id);
+  for (const c of ['likes', 'saves', 'notInterested']) db[c] = db[c].filter((x) => x.userId !== id && !myPosts.has(x.postId));
+  db.comments = db.comments.filter((c) => c.authorId !== id && !myPosts.has(c.postId));
+  db.friendRequests = db.friendRequests.filter((r) => r.from !== id && r.to !== id);
+  db.friendships = db.friendships.filter((f) => f.a !== id && f.b !== id);
+  db.messages = db.messages.filter((m) => m.from !== id && m.to !== id);
+  db.blocks = db.blocks.filter((b) => b.by !== id && b.target !== id);
+  db.invites = db.invites.filter((i) => i.from !== id);
+  db.tiktokAdds = db.tiktokAdds.filter((a) => a.from !== id);
+  db.reports = db.reports.filter((r) => r.by !== id); // reports *about* this account are kept for safety review
+  db.sessions = db.sessions.filter((s) => s.userId !== id);
+  db.users = db.users.filter((u) => u.id !== id);
+  save();
+  destroySession(req, res);
+  res.json({ ok: true });
+});
 
 router.put('/me/profile', requireAuth, (req, res) => {
   const { displayName, bio, tiktokHandle } = req.body || {};

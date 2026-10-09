@@ -88,6 +88,7 @@ HTTPS is issued automatically.
 | `NODE_ENV` | — | Set to `production` when deployed |
 | `DATABASE_URL` | — | Free Postgres connection string (e.g. Neon) so accounts and chats survive restarts on the free plan |
 | `YOUTUBE_API_KEY` | — | Turns on YouTube Shorts in Discover |
+| `SUPPORT_EMAIL` | — | Contact email shown on the For Parents page (`/parents`) |
 | `ADMIN_USERNAMES` | — | Comma-separated Ember usernames that can add videos to the Discover library in-app |
 | `EMBER_HATE_TERMS` | — | Comma-separated extra terms to always block |
 

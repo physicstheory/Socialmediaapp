@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="How Ember keeps kids and teens safer: friends-first video, filtered content, locked age protections and a parent PIN.">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <title>Ember for Parents</title>
+  <style>
+    :root {
+      --red: #FF3B30; --orange: #FF9500; --grad: linear-gradient(135deg, #FF9500, #FF3B30);
+      --bg: #ffffff; --surface: #f6f6f7; --text: #161823; --muted: #62636a; --border: #e3e3e5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #121212; --surface: #1e1e1e; --text: #f1f1f2; --muted: #a0a0a6; --border: #2f2f2f; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    a { color: var(--red); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+    header.hero { background: #000; color: #fff; padding: calc(28px + env(safe-area-inset-top, 0px)) 0 44px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; text-decoration: none; color: #fff; }
+    .brand img { width: 40px; height: 40px; border-radius: 10px; }
+    .hero h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.1; margin: 28px 0 12px; letter-spacing: -0.5px; }
+    .hero h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { color: #c9c9cf; font-size: 18px; margin: 0 0 24px; max-width: 560px; }
+    .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 22px; border-radius: 10px; font-weight: 700; text-decoration: none; }
+    .btn.primary { background: var(--grad); color: #fff; }
+    .btn.ghost { border: 1px solid rgba(255,255,255,.35); color: #fff; }
+    section { padding: 40px 0 8px; }
+    h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.3px; }
+    .lead { color: var(--muted); margin: 0 0 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .card { background: var(--surface); border-radius: 14px; padding: 18px; }
+    .card .ico { width: 40px; height: 40px; border-radius: 10px; background: var(--grad); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px; }
+    .card h3 { margin: 0 0 4px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+    td:first-child { font-weight: 600; }
+    .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; }
+    ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    ol.steps li { counter-increment: s; position: relative; padding: 14px 16px 14px 58px; background: var(--surface); border-radius: 14px; }
+    ol.steps li::before { content: counter(s); position: absolute; left: 16px; top: 14px; width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .honest { border-left: 4px solid var(--orange); background: var(--surface); border-radius: 0 14px 14px 0; padding: 16px 18px; }
+    .honest ul { margin: 8px 0 0; padding-left: 20px; }
+    details { background: var(--surface); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    summary { font-weight: 700; cursor: pointer; }
+    details p { margin: 10px 0 0; color: var(--muted); }
+    footer { padding: 40px 0 calc(40px + env(safe-area-inset-bottom, 0px)); color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="/icons/icon-192.png" alt="">Ember</a>
+      <h1>The short-video app you can <span>actually say yes to.</span></h1>
+      <p>Ember opens on videos from your child's real friends instead of strangers. Messaging is friends-only, and the protections for younger users stay on.</p>
+      <div class="btns">
+        <a class="btn primary" href="/">Open Ember</a>
+        <a class="btn ghost" href="#setup">Set it up with your child</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>What makes Ember different</h2>
+      <p class="lead">Safety is built into how Ember works, not hidden in a settings menu.</p>
+      <div class="grid">
+        <div class="card"><div class="ico">👥</div><h3>Friends first</h3><p>The app opens on the Following feed: videos posted by friends your child has accepted. Discover is a separate tab, and you can switch it off.</p></div>
+        <div class="card"><div class="ico">💬</div><h3>No strangers in DMs</h3><p>Only accepted friends can send messages. Adults can't search for, view or message anyone under 18.</p></div>
+        <div class="card"><div class="ico">🛡️</div><h3>Automatic filtering</h3><p>Every video, comment and message is checked. Dangerous challenges, self-harm promotion, sexual content and bullying are blocked outright.</p></div>
+        <div class="card"><div class="ico">🔒</div><h3>Parent PIN</h3><p>Lock the settings with a PIN so filters, privacy and friend approvals can't be changed without you.</p></div>
+        <div class="card"><div class="ico">🚫</div><h3>Grooming red flags blocked</h3><p>In chats that include a young person, messages asking for secrets, photos, addresses, ages or meetups are stopped and logged.</p></div>
+        <div class="card"><div class="ico">📍</div><h3>Private by default</h3><p>Accounts for under-16s are always private. Phone numbers, emails, addresses and links are hidden from teens' chats, and photos are stripped of location data.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Protections by age</h2>
+      <p class="lead">Ember sets these automatically from the birthday entered at sign-up.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th></th><th>Kids (under 13)</th><th>Teens (13–17)</th><th>Adults</th></tr></thead>
+          <tbody>
+            <tr><td>Content shown</td><td>Everyone-rated only (locked)</td><td>Up to Teen 13+ (locked)</td><td>Their choice</td></tr>
+            <tr><td>Content filters</td><td>All on, locked</td><td>Sexual, drugs, dangerous &amp; self-harm locked on</td><td>Their choice</td></tr>
+            <tr><td>Discover tab</td><td>Off unless a parent turns it on</td><td>On, filtered</td><td>On</td></tr>
+            <tr><td>Who can find them</td><td>Nobody. Friend code only.</td><td>Other teens only</td><td>Other adults only</td></tr>
+            <tr><td>Adding friends</td><td>Friend code + parent PIN</td><td>Teens; adults (e.g. you) only by friend code</td><td>Adults</td></tr>
+            <tr><td>Account privacy</td><td>Private (locked)</td><td>Private (locked under 16)</td><td>Their choice</td></tr>
+            <tr><td>Photo Snaps</td><td>Off unless a parent turns it on</td><td>On, friends only</td><td>On, friends only</td></tr>
+            <tr><td>Settings changes</td><td>Need parent PIN</td><td>Optional PIN</td><td>Optional PIN</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="setup">
+      <h2>Set it up together (5 minutes)</h2>
+      <p class="lead">Doing this side by side is the best way to start, and it's a good time to talk about online safety.</p>
+      <ol class="steps">
+        <li><strong>Open Ember and add it to the home screen.</strong> On iPhone, tap Share then <em>Add to Home Screen</em>. On Android, tap ⋮ then <em>Install app</em>.</li>
+        <li><strong>Create the account with your child's real birthday.</strong> That's what switches on the right protections, and the birthday is never shown to anyone.</li>
+        <li><strong>Choose interests and filters together.</strong> Pick topics they love, then review the filters. Anything locked for their age shows a 🔒.</li>
+        <li><strong>Set a parent PIN.</strong> This is required for under-13s and optional for teens. Keep it to yourself: it's needed to change settings and, for kids, to add friends.</li>
+        <li><strong>Add yourself as a friend.</strong> Share your own friend code (Friends → My friend code) and have your child enter it. Adults can only connect with under-18s this way.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>What Ember can't promise</h2>
+      <div class="honest">
+        We'd rather be honest than overpromise:
+        <ul>
+          <li>Ember's automatic filters read <strong>text</strong>: captions, hashtags, titles and messages. They can't fully judge what's inside a video or photo, so reporting and parental involvement still matter.</li>
+          <li>Videos from TikTok and YouTube play in those companies' official players. Ember filters what it shows, but tapping through to TikTok or YouTube takes your child outside Ember's protections.</li>
+          <li>Age protections depend on the birthday entered. Please make sure it's correct.</li>
+          <li>No app replaces talking with your child. Ember's report and block buttons are on every video, profile and message. Show your child where they are.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Questions parents ask</h2>
+      <details><summary>Can I read my child's messages?</summary><p>Not from your own account. Messages stay private between friends, which helps kids trust the app and come to you when something's wrong. What you control is who they can talk to (friends only, no adults unless you approve them by friend code) and what gets blocked automatically.</p></details>
+      <details><summary>Do messages really disappear?</summary><p>Chats can disappear 24 hours after they're read, like Snapchat, and photo Snaps can be viewed once. Anything that's reported is kept as evidence, and messages blocked by the safety filter are logged.</p></details>
+      <details><summary>What happens when something is reported?</summary><p>The video is hidden from the person who reported it straight away, and it's hidden for everyone after several reports. Accounts that get reported repeatedly are blocked from sending friend requests. Reported messages and Snaps are kept so they can be reviewed.</p></details>
+      <details><summary>Does Ember show ads or sell data?</summary><p>No. There are no ads and no data sales. Birthdays are only used to set protections and are never shown to other users.</p></details>
+      <details><summary>How do I delete my child's account?</summary><p>Go to Settings → Account → Delete account. For kids' accounts, the parent PIN is required.</p></details>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    {{SUPPORT_CONTACT}}
+    <p>Ember · Friends first. Safe by design. · <a href="/">Open the app</a></p>
+  </footer>
+</body>
+</html>

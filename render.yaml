@@ -1,18 +1,22 @@
-# One-click deploy on Render (https://render.com): New → Blueprint → pick this repo.
+# Deploy on Render (https://render.com): New → Blueprint → pick this repo.
+# Works on the Free plan. Add DATABASE_URL (free Neon Postgres) so accounts survive restarts,
+# and YOUTUBE_API_KEY to fill Discover with YouTube Shorts. See docs/DEPLOY_WEB_APP.md.
 services:
   - type: web
     name: ember
     runtime: node
-    plan: starter            # a persistent disk needs a paid plan; see docs/DEPLOY_WEB_APP.md
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /parents
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATA_DIR
-        value: /var/data
-    disk:
-      name: ember-data
-      mountPath: /var/data
-      sizeGB: 1
+      - key: DATABASE_URL
+        sync: false          # paste your Neon connection string in the Render dashboard
+      - key: YOUTUBE_API_KEY
+        sync: false          # paste your YouTube Data API key
+      - key: ADMIN_USERNAMES
+        sync: false          # your Ember username, to add Discover videos in-app
+      - key: SUPPORT_EMAIL
+        sync: false          # shown on the For Parents page

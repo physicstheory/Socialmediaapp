@@ -15,7 +15,8 @@ export function showAuth(onDone, invite = null) {
     h('p', { class: 'muted' }, 'Videos from your friends first. Messaging that’s built to be safe.'),
     h('button', { class: 'btn primary block', onclick: () => show(signup) }, 'Create account'),
     h('button', { class: 'btn ghost block', onclick: () => show(signin) }, 'Sign in'),
-    h('p', { class: 'tiny muted' }, 'By continuing you agree to keep Ember kind and safe for everyone.'));
+    h('p', { class: 'tiny muted' }, 'By continuing you agree to keep Ember kind and safe for everyone.'),
+    h('a', { class: 'link-btn accent small', href: '/parents' }, 'Parent? See how Ember keeps kids safe →'));
 
   const field = (label, input) => h('label', { class: 'field' }, h('span', {}, label), input);
   const errBox = () => h('p', { class: 'form-error', role: 'alert' });

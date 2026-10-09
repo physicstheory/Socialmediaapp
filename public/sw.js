@@ -1,6 +1,6 @@
 // Ember service worker: caches the app shell so it opens instantly and works as an installed app.
 // API calls and videos always go to the network (never cached) so feeds and chats stay fresh & private.
-const CACHE = 'ember-v3';
+const CACHE = 'ember-v4';
 const SHELL = [
   '/', '/index.html', '/css/styles.css', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png',
   '/js/app.js', '/js/api.js', '/js/ui.js',

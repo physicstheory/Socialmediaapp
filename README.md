@@ -36,6 +36,10 @@ Run the tests with `npm test`.
 
 **👉 To put it online and install it on your phone, follow [docs/DEPLOY_WEB_APP.md](docs/DEPLOY_WEB_APP.md).**
 
+- **For parents:** a public guide at `/parents` explains every protection and how to set Ember up together.
+- **App Store and Google Play:** see [docs/APP_STORE.md](docs/APP_STORE.md).
+- **Reaching parents:** see [docs/PARENT_LAUNCH_STRATEGY.md](docs/PARENT_LAUNCH_STRATEGY.md).
+
 ## How it works
 
 ```

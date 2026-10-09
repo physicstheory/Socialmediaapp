@@ -427,3 +427,4 @@ textarea.input { resize: vertical; }
 .invite-more[open] summary { margin-bottom: 10px; }
 .remember { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .remember input { width: 18px; height: 18px; accent-color: var(--red); }
+.danger-text { color: var(--red); }

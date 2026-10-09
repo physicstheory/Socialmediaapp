@@ -1,5 +1,5 @@
 import { api, state, withPin } from '../api.js';
-import { h, icon, avatar, toast, confirmDialog } from '../ui.js';
+import { h, icon, avatar, toast, confirmDialog, modal } from '../ui.js';
 import { signOut } from '../app.js';
 import {
   maturitySection, filtersSection, interestsSection, blockedWordsSection, discoverSection, privacySection, safetyRules, section, INTERESTS,
@@ -59,6 +59,31 @@ export function renderSettings(view) {
       urls, h('div', { class: 'row gap' }, cat, rating), btn);
   }
 
+  async function deleteAccount() {
+    if (!(await confirmDialog('Delete your account?', 'This permanently deletes your profile, videos, friends and chats. It can’t be undone.', 'Continue', true))) return;
+    const password = await askPassword();
+    if (password === null) return;
+    try {
+      await withPin((pin) => api('/me', { method: 'DELETE', body: { password, pin } }), 'Enter the parent PIN to delete this account.');
+      toast('Your account was deleted');
+      setTimeout(() => { location.hash = ''; location.reload(); }, 800);
+    } catch (e) { if (!e.cancelled) toast(e.message, 'error'); }
+  }
+
+  function askPassword() {
+    return new Promise((resolve) => {
+      const input = h('input', { class: 'input', type: 'password', autocomplete: 'current-password', placeholder: 'Your password' });
+      let close;
+      const done = (v) => { close(); resolve(v); };
+      close = modal(h('form', { class: 'col gap', onsubmit: (e) => { e.preventDefault(); done(input.value); } },
+        h('h3', {}, 'Confirm it’s you'), input,
+        h('div', { class: 'row gap' },
+          h('button', { type: 'button', class: 'btn ghost', onclick: () => done(null) }, 'Cancel'),
+          h('button', { class: 'btn danger' }, 'Delete forever'))), { dismissable: false });
+      setTimeout(() => input.focus(), 50);
+    });
+  }
+
   async function loadBlocked() {
     const { items } = await api('/blocks');
     blocked.replaceChildren(...(items.length ? items.map((u) => h('div', { class: 'list-row' }, avatar(u, 36), h('span', { class: 'grow' }, u.displayName),
@@ -83,9 +108,12 @@ export function renderSettings(view) {
     safetyRules(user),
     user.isAdmin ? librarySection() : null,
     section('Blocked accounts', null, blocked),
+    section('For parents', 'How Ember protects young people, and how to set it up together.',
+      h('a', { class: 'btn ghost block', href: '/parents' }, icon('shield', { size: 18 }), ' Open the parent guide')),
     section('Account', null,
       h('p', { class: 'small muted' }, `Signed in as @${user.username}`),
-      h('button', { class: 'btn ghost block', onclick: async () => { if (await confirmDialog('Log out?', null, 'Log out')) signOut(); } }, 'Log out')),
+      h('button', { class: 'btn ghost block', onclick: async () => { if (await confirmDialog('Log out?', null, 'Log out')) signOut(); } }, 'Log out'),
+      h('button', { class: 'btn ghost block danger-text', onclick: deleteAccount }, 'Delete account')),
     h('div', { class: 'pad' }, h('button', { class: 'btn primary block', onclick: save }, 'Save settings'))));
   loadBlocked().catch(() => {});
 }
