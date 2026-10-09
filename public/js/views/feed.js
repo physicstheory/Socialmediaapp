@@ -68,7 +68,13 @@ export function videoList({ onNearEnd, emptyEl } = {}) {
     if (active) deactivate(active);
   }
 
-  return { el: scroller, add, destroy, scrollTo: (i) => scroller.children[i]?.scrollIntoView() };
+  function addCard(card) {
+    card.classList.add('slide');
+    scroller.append(card);
+    io.observe(card);
+  }
+
+  return { el: scroller, add, addCard, destroy, count: () => posts.length, scrollTo: (i) => scroller.children[i]?.scrollIntoView() };
 }
 
 function slide(post, ctx) {
@@ -282,7 +288,17 @@ export function renderFeed(view) {
     h('a', { class: 'feed-top-side icon-btn', href: '#/friends', 'aria-label': 'Find friends' }, icon('search', { size: 26 })));
 
   async function load() {
-    if (loading || nextOffset === null) return;
+    if (loading) return;
+    if (nextOffset === null) {
+      // Out of new videos: show a "caught up" card, then keep the feed going by replaying from the top.
+      if (!list.count()) return;
+      list.addCard(h('div', { class: 'caught-up' },
+        emptyState('check', 'You’re all caught up', tab === 'following'
+          ? 'You’ve seen every video from your friends. Keep scrolling to watch them again.'
+          : 'You’ve seen every video that matches your interests and filters. Keep scrolling to replay, or add more interests for more videos.',
+        h('a', { class: 'btn ghost light', href: '#/settings' }, 'Add interests'))));
+      nextOffset = 0;
+    }
     loading = true;
     const forTab = tab;
     try {

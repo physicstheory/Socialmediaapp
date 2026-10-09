@@ -11,7 +11,7 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 
 const COLLECTIONS = [
   'users', 'sessions', 'posts', 'likes', 'saves', 'comments', 'notInterested',
-  'friendRequests', 'friendships', 'messages', 'blocks', 'reports',
+  'friendRequests', 'friendships', 'messages', 'blocks', 'reports', 'invites',
 ];
 
 function emptyDb() {

@@ -73,7 +73,7 @@ router.get('/friends/search', (req, res) => {
     .filter((u) => u.id !== me.id && !isBlocked(me.id, u.id))
     .filter((u) => userAgeGroup(u) === group) // adults only find adults, teens only find teens
     .filter((u) => u.settings.friendRequests !== 'code' || u.username === q)
-    .filter((u) => u.username.startsWith(q) || u.displayName.toLowerCase().includes(q))
+    .filter((u) => u.username.startsWith(q) || u.displayName.toLowerCase().includes(q) || (u.tiktokHandle && u.tiktokHandle.startsWith(q)))
     .slice(0, 20)
     .map((u) => {
       const pending = db.friendRequests.find((r) => r.status === 'pending' && ((r.from === me.id && r.to === u.id) || (r.from === u.id && r.to === me.id)));

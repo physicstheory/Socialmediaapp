@@ -71,7 +71,7 @@ export function requireAuth(req, res, next) {
 /** Minimal public view of a user (what other people may see). */
 export function publicUser(u) {
   if (!u) return null;
-  return { id: u.id, username: u.username, displayName: u.displayName, avatarColor: u.avatarColor, bio: u.bio || '' };
+  return { id: u.id, username: u.username, displayName: u.displayName, avatarColor: u.avatarColor, bio: u.bio || '', tiktokHandle: u.tiktokHandle || '' };
 }
 
 /** What the signed-in user sees about themselves. */

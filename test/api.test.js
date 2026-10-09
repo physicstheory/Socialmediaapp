@@ -111,3 +111,21 @@ test('feed opens on friends and respects filters', async () => {
   assert.equal(feed.body.items.length, 1);
   assert.match(feed.body.items[0].caption, /dog/);
 });
+
+test('invite links make friends and deliver the note, with age rules', async () => {
+  const a = await account('inviter', 16);
+  const { body: inv } = await a('POST', '/api/invites', { note: 'hey join me here!' });
+  assert.match(inv.url, /#\/invite\//);
+  const info = await fetch(`${base}/api/invites/${inv.token}`).then((r) => r.json());
+  assert.equal(info.from.username, 'inviter');
+  const adult = await account('lurker', 40);
+  assert.equal((await adult('POST', `/api/invites/${inv.token}/accept`, {})).status, 403);
+  const b = await account('invitee', 15);
+  const ok = await b('POST', `/api/invites/${inv.token}/accept`, {});
+  assert.equal(ok.status, 200);
+  const chat = await b('GET', `/api/chats/${a.user.id}`);
+  assert.equal(chat.body.items[0].text, 'hey join me here!');
+  assert.equal((await b('POST', `/api/invites/${inv.token}/accept`, {})).status, 404);
+  const bad = await a('POST', '/api/invites', { note: "don't tell your parents" });
+  assert.equal(bad.status, 400);
+});

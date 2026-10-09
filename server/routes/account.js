@@ -83,7 +83,9 @@ router.post('/auth/logout', (req, res) => {
 router.get('/me', requireAuth, (req, res) => res.json({ user: selfUser(req.user) }));
 
 router.put('/me/profile', requireAuth, (req, res) => {
-  const { displayName, bio } = req.body || {};
+  const { displayName, bio, tiktokHandle } = req.body || {};
+  const tt = String(tiktokHandle ?? req.user.tiktokHandle ?? '').trim().toLowerCase().replace(/^@/, '');
+  if (tt && !/^[a-z0-9_.]{2,24}$/.test(tt)) return res.status(400).json({ error: 'That doesn’t look like a TikTok username.' });
   const name = String(displayName ?? req.user.displayName).trim().slice(0, 30);
   const b = String(bio ?? req.user.bio).trim().slice(0, 120);
   const check = analyzeText(`${name} ${b}`);
@@ -92,6 +94,7 @@ router.put('/me/profile', requireAuth, (req, res) => {
   }
   req.user.displayName = name;
   req.user.bio = b;
+  req.user.tiktokHandle = tt;
   save();
   res.json({ user: selfUser(req.user) });
 });

@@ -1,6 +1,7 @@
 import { api, state } from './api.js';
 import { h, $, icon, logo, toast } from './ui.js';
 import { showAuth } from './views/auth.js';
+import { inviteTokenFromHash, rememberInvite, inviteInfo, handlePendingInvite } from './views/invite.js';
 import { showOnboarding } from './views/onboarding.js';
 import { renderFeed } from './views/feed.js';
 import { renderFriends } from './views/friends.js';
@@ -63,6 +64,8 @@ export async function refreshCounts() {
 }
 
 function route() {
+  const invite = inviteTokenFromHash();
+  if (invite) { rememberInvite(invite); handlePendingInvite(navigate); return navigate('home'); }
   const path = location.hash.replace(/^#\/?/, '') || 'home';
   const match = ROUTES.map((r) => ({ r, m: path.match(r.re) })).find((x) => x.m);
   if (!match) return navigate('home');
@@ -115,23 +118,26 @@ export async function signOut() {
 export function afterAuth(user) {
   state.set({ user });
   if (!user.settings.onboarded) {
-    showOnboarding(user, (u) => { state.set({ user: u }); location.hash = '#/home'; startApp(); });
+    showOnboarding(user, (u) => { state.set({ user: u }); location.hash = '#/home'; startApp(); handlePendingInvite(navigate); });
   } else {
     location.hash = '#/home';
     startApp();
+    handlePendingInvite(navigate);
   }
 }
 
 async function boot() {
+  const invite = inviteTokenFromHash();
+  if (invite) { rememberInvite(invite); history.replaceState(null, '', '/'); }
   const splash = $('#splash');
   const minSplash = new Promise((r) => setTimeout(r, 1600));
   const me = api('/me').then((d) => d.user).catch(() => null);
-  const [user] = await Promise.all([me, minSplash]);
+  const [user, , info] = await Promise.all([me, minSplash, invite ? inviteInfo(invite) : null]);
   splash.classList.add('hide');
   setTimeout(() => splash.remove(), 500);
   if (!user) {
     $('#app').replaceChildren(h('div', { class: 'auth-backdrop' }, logo(96)));
-    showAuth(afterAuth);
+    showAuth(afterAuth, info);
   } else {
     afterAuth(user);
   }

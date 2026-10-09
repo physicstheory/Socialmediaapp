@@ -417,3 +417,7 @@ textarea.input { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+.caught-up { display: flex; align-items: center; justify-content: center; color: #fff; }
+.caught-up .muted { color: #aaa; }
+.invite-banner { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: var(--radius); background: linear-gradient(135deg, rgba(255,149,0,.12), rgba(255,59,48,.12)); }
+.invite-url { overflow-wrap: anywhere; font-family: ui-monospace, Menlo, monospace; }

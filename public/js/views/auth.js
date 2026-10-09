@@ -1,8 +1,9 @@
 import { api } from '../api.js';
 import { h, logo, modal, toast } from '../ui.js';
+import { inviteBanner } from './invite.js';
 
 /** First-launch popup: Sign in or Create account. */
-export function showAuth(onDone) {
+export function showAuth(onDone, invite = null) {
   let close = null;
   const body = h('div', { class: 'auth' });
   const show = (fn) => body.replaceChildren(fn());
@@ -10,6 +11,7 @@ export function showAuth(onDone) {
   const welcome = () => h('div', { class: 'col gap center' },
     logo(72),
     h('h2', {}, 'Welcome to Ember'),
+    invite ? inviteBanner(invite) : null,
     h('p', { class: 'muted' }, 'Videos from your friends first. Messaging that’s built to be safe.'),
     h('button', { class: 'btn primary block', onclick: () => show(signup) }, 'Create account'),
     h('button', { class: 'btn ghost block', onclick: () => show(signin) }, 'Sign in'),

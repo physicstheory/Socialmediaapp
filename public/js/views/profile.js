@@ -16,6 +16,7 @@ function editProfile(onSaved) {
   const u = state.user;
   const name = h('input', { class: 'input', maxlength: '30', value: u.displayName });
   const bio = h('textarea', { class: 'input', maxlength: '120', rows: '3' });
+  const tiktok = h('input', { class: 'input', maxlength: '25', placeholder: '@yourtiktok', autocapitalize: 'none', value: u.tiktokHandle ? `@${u.tiktokHandle}` : '' });
   bio.value = u.bio || '';
   let close;
   close = modal(h('form', {
@@ -23,7 +24,7 @@ function editProfile(onSaved) {
     onsubmit: async (e) => {
       e.preventDefault();
       try {
-        const { user } = await api('/me/profile', { method: 'PUT', body: { displayName: name.value, bio: bio.value } });
+        const { user } = await api('/me/profile', { method: 'PUT', body: { displayName: name.value, bio: bio.value, tiktokHandle: tiktok.value } });
         state.set({ user });
         close();
         onSaved();
@@ -32,6 +33,8 @@ function editProfile(onSaved) {
   }, h('h3', {}, 'Edit profile'),
   h('label', { class: 'field' }, h('span', {}, 'Name'), name),
   h('label', { class: 'field' }, h('span', {}, 'Bio'), bio),
+  h('label', { class: 'field' }, h('span', {}, 'TikTok username (optional)'), tiktok,
+    h('span', { class: 'tiny muted' }, 'Lets friends your age find you on Ember by your TikTok name.')),
   h('div', { class: 'row gap' }, h('button', { type: 'button', class: 'btn ghost', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn primary' }, 'Save'))));
 }
 
@@ -99,7 +102,8 @@ export async function renderProfile(view, username) {
         h('div', {}, h('strong', {}, compact(data.posts.length)), h('span', {}, 'Videos')),
         h('div', {}, h('strong', {}, me.settings.showLikeCounts ? compact(data.likeCount) : '—'), h('span', {}, 'Likes'))),
       actions,
-      user.bio ? h('p', { class: 'bio' }, user.bio) : null),
+      user.bio ? h('p', { class: 'bio' }, user.bio) : null,
+      user.tiktokHandle ? h('a', { class: 'small muted', href: `https://www.tiktok.com/@${encodeURIComponent(user.tiktokHandle)}`, target: '_blank', rel: 'noopener noreferrer' }, `TikTok: @${user.tiktokHandle}`) : null),
     tabs, body));
   showTab('videos');
 }

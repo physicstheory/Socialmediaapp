@@ -11,7 +11,7 @@ export function renderFriends(view) {
   let searchTimer;
 
   const searchInput = h('input', {
-    class: 'input search', type: 'search', placeholder: 'Search by username', autocapitalize: 'none',
+    class: 'input search', type: 'search', placeholder: 'Search by Ember or TikTok username', autocapitalize: 'none',
     oninput: () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 300); },
   });
 
@@ -68,6 +68,31 @@ export function renderFriends(view) {
       },
     }, icon('copy', { size: 16 }), ' Share'));
 
+  // Invite friends who use TikTok but aren't on Ember yet.
+  const note = h('textarea', { class: 'input', rows: '2', maxlength: '300', placeholder: 'Add a message (optional) — they’ll see it in Ember when they join' });
+  const inviteOut = h('div', { class: 'col gap' });
+  const makeInvite = h('button', {
+    class: 'btn primary block',
+    onclick: async () => {
+      makeInvite.disabled = true;
+      try {
+        const { url } = await api('/invites', { method: 'POST', body: { note: note.value } });
+        const text = `Join me on Ember 🔥 ${url}`;
+        note.value = '';
+        inviteOut.replaceChildren(
+          h('div', { class: 'code-card' }, h('span', { class: 'small invite-url' }, url)),
+          h('div', { class: 'row gap' },
+            h('button', {
+              class: 'btn small primary grow',
+              onclick: async () => { try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('Invite copied'); } } catch { /* cancelled */ } },
+            }, 'Share'),
+            h('button', { class: 'btn small ghost grow', onclick: async () => { try { await navigator.clipboard.writeText(text); toast('Copied! Paste it in a TikTok message'); } catch { toast('Couldn’t copy', 'error'); } } }, icon('copy', { size: 16 }), ' Copy'),
+            h('a', { class: 'btn small ghost grow', href: 'https://www.tiktok.com/messages', target: '_blank', rel: 'noopener noreferrer' }, 'Open TikTok')),
+          h('p', { class: 'tiny muted' }, 'Each link works once and expires in 14 days.'));
+      } catch (e) { toast(e.message, 'error'); } finally { makeInvite.disabled = false; }
+    },
+  }, 'Create invite link');
+
   async function loadRequests() {
     const { incoming, outgoing } = await api('/friends/requests');
     state.set({ requests: incoming.length });
@@ -123,6 +148,9 @@ export function renderFriends(view) {
           : 'Ember keeps adults and under-18s apart. Only friends can message you.')),
     isKid ? null : h('section', {}, searchInput, results),
     h('section', {}, h('h3', {}, 'Add with a friend code'), codeForm, myCode),
+    h('section', {}, h('h3', {}, 'Invite TikTok friends'),
+      h('p', { class: 'small muted' }, 'Friends not on Ember yet? Make an invite link and send it to them in a TikTok message. When they open it and join, you’ll be friends on Ember and your message will be waiting in their chat.'),
+      note, makeInvite, inviteOut),
     h('section', {}, h('h3', {}, 'Friend requests'), requestsBox),
     h('section', {}, h('h3', {}, 'Your friends'), friendsBox)));
 

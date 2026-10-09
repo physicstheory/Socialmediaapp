@@ -1,11 +1,11 @@
 // Ember service worker: caches the app shell so it opens instantly and works as an installed app.
 // API calls and videos always go to the network (never cached) so feeds and chats stay fresh & private.
-const CACHE = 'ember-v1';
+const CACHE = 'ember-v2';
 const SHELL = [
   '/', '/index.html', '/css/styles.css', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png',
   '/js/app.js', '/js/api.js', '/js/ui.js',
   '/js/views/auth.js', '/js/views/onboarding.js', '/js/views/settingsForm.js', '/js/views/feed.js', '/js/views/friends.js',
-  '/js/views/create.js', '/js/views/inbox.js', '/js/views/chat.js', '/js/views/profile.js', '/js/views/settings.js',
+  '/js/views/create.js', '/js/views/inbox.js', '/js/views/chat.js', '/js/views/profile.js', '/js/views/settings.js', '/js/views/invite.js',
 ];
 
 self.addEventListener('install', (e) => {
